@@ -5,7 +5,7 @@ A Symfony-based bookshop catalog application, built primarily as a **DevOps lear
 ## Stack
 
 - **PHP** 8.4
-- **Symfony** 8.x (skeleton-based, built up manually rather than via `--webapp`)
+- **Symfony** 8.x
 - **MySQL** 8.x via Doctrine ORM
 - **Twig** for server-rendered HTML views
 - **Composer** for dependency management
@@ -13,11 +13,14 @@ A Symfony-based bookshop catalog application, built primarily as a **DevOps lear
 ## Current state
 
 - Core entities in place: `Book`, `Author`, `Category`, `Publisher`, with proper relations (ManyToMany, ManyToOne)
-- Full CRUD (list/create/edit/delete) for all four entities, both as HTML forms and (partially) as a JSON API
+- Full CRUD (list/create/edit/delete) for all four entities, both as HTML forms
 - Business logic extracted into dedicated `*Service` classes, keeping controllers thin
 - Local MySQL connection configured via `.env` / `DATABASE_URL`
-- Session-based flash messaging for form feedback (CSRF currently disabled — flagged as a known gap, see below)
 
+Endpoints
+
+HTML CRUD pages are available at /books, /authors, /categories, and /publishers, with matching JSON create endpoints under /api/* for a couple of entities.
+Health endpoint: /health.
 ## Local setup (quick reference)
 
 ```bash
@@ -31,11 +34,6 @@ Then visit `http://127.0.0.1:8000/` for the dashboard.
 
 ## Where this is headed
 
-The next phase of work is DevOps-focused rather than feature-focused:
-
-- Containerize the app (PHP-FPM + MySQL + Nginx/Caddy via Docker Compose)
-- Add a CI pipeline (lint, static analysis, migrations check, basic smoke tests)
-- Introduce environment-specific configuration (dev/staging/prod)
-- Plan a deployment target and release process
+The next phase of work is DevOps-focused rather than feature-focused.
 
 This README will be updated as those pieces land.
