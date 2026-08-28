@@ -1,0 +1,60 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Edit Book · Bookhive{% endblock %}
+
+{% block body %}
+    <h1>Edit Book</h1>
+    <p class="subtitle"><a href="{{ path('book_list') }}">&larr; Back to Books</a></p>
+
+    <form method="post">
+        <label for="title">Title *</label>
+        <input type="text" id="title" name="title" required value="{{ title|default(book.title) }}">
+
+        <label for="isbn">ISBN *</label>
+        <input type="text" id="isbn" name="isbn" required value="{{ isbn|default(book.isbn) }}">
+
+        <label for="slug">Slug *</label>
+        <input type="text" id="slug" name="slug" required value="{{ slug|default(book.slug) }}">
+
+        <label for="description">Description</label>
+        <textarea id="description" name="description" rows="4">{{ description|default(book.description) }}</textarea>
+
+        <label for="price">Price ($) *</label>
+        <input type="number" step="0.01" min="0" id="price" name="price" required value="{{ price|default(book.price) }}">
+
+        <label for="stock">Stock *</label>
+        <input type="number" min="0" id="stock" name="stock" required value="{{ stock|default(book.stock) }}">
+
+        <label for="publishedAt">Published Date</label>
+        <input type="date" id="publishedAt" name="publishedAt" value="{{ publishedAt|default(book.publishedAt ? book.publishedAt|date('Y-m-d') : '') }}">
+
+        <label for="category">Category *</label>
+        <select id="category" name="categoryId" required>
+            <option value="">— Select a category —</option>
+            {% for category in categories %}
+                <option value="{{ category.id }}" {{ (categoryId|default(book.category.id)) == category.id ? 'selected' : '' }}>{{ category.name }}</option>
+            {% endfor %}
+        </select>
+
+        <label for="publisher">Publisher</label>
+        <select id="publisher" name="publisherId">
+            <option value="">— None —</option>
+            {% for publisher in publishers %}
+                <option value="{{ publisher.id }}" {{ (publisherId|default(book.publisher ? book.publisher.id : null)) == publisher.id ? 'selected' : '' }}>{{ publisher.name }}</option>
+            {% endfor %}
+        </select>
+
+        <label for="authors">Authors</label>
+        <select id="authors" name="authorIds[]" multiple size="5">
+            {% set selectedAuthorIds = authorIds|default(book.authors|map(a => a.id)) %}
+            {% for author in authors %}
+                <option value="{{ author.id }}" {{ author.id in selectedAuthorIds ? 'selected' : '' }}>{{ author.name }}</option>
+            {% endfor %}
+        </select>
+        <p style="font-size:0.8rem; color: var(--muted); margin-top:4px;">Hold Ctrl (Cmd on Mac) to select multiple authors.</p>
+
+        <div style="margin-top: 24px;">
+            <button type="submit" class="btn btn-primary">Save Changes</button>
+        </div>
+    </form>
+{% endblock %}

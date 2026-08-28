@@ -1,0 +1,56 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Books · Bookhive{% endblock %}
+
+{% block body %}
+    <div class="top-bar">
+        <div>
+            <h1>Books</h1>
+            <p class="subtitle">{{ books|length }} book{{ books|length != 1 ? 's' : '' }} in your catalog</p>
+        </div>
+        <a href="{{ path('book_new') }}" class="btn btn-primary">+ Add Book</a>
+    </div>
+
+    {% if books|length == 0 %}
+        <div class="empty-state">
+            <p>No books yet.</p>
+            <a href="{{ path('book_new') }}" class="btn btn-primary">Add your first book</a>
+        </div>
+    {% else %}
+        <div class="book-grid">
+            {% for book in books %}
+                <div class="book-card">
+                    <h3>{{ book.title }}</h3>
+                    <div class="isbn">ISBN: {{ book.isbn }}</div>
+
+                    <div class="meta-row">
+                        <span>✍️ {% if book.authors|length > 0 %}{% for author in book.authors %}{{ author.name }}{% if not loop.last %}, {% endif %}{% endfor %}{% else %}<em>No author</em>{% endif %}</span>
+                        <span>🏷️ {{ book.category.name }}</span>
+                        {% if book.publisher %}<span>🏢 {{ book.publisher.name }}</span>{% endif %}
+                        {% if book.publishedAt %}<span>📅 {{ book.publishedAt|date('Y') }}</span>{% endif %}
+                    </div>
+
+                    {% if book.description %}
+                        <p class="description">{{ book.description|slice(0, 140) }}{{ book.description|length > 140 ? '…' : '' }}</p>
+                    {% else %}
+                        <p class="description"><em>No description available.</em></p>
+                    {% endif %}
+
+                    <div class="price-row">
+                        <span class="price">${{ book.price|number_format(2) }}</span>
+                        <span class="stock-badge {{ book.stock < 5 ? 'low' : '' }}">
+                            {{ book.stock }} in stock
+                        </span>
+                    </div>
+
+                    <div class="card-actions">
+                        <a href="{{ path('book_edit', {id: book.id}) }}" class="btn btn-outline">Edit</a>
+                        <form method="post" action="{{ path('book_delete', {id: book.id}) }}" onsubmit="return confirm('Delete {{ book.title }}?');">
+                            <button type="submit" class="btn-danger-link">Delete</button>
+                        </form>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+{% endblock %}

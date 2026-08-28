@@ -1,0 +1,35 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Authors · Bookhive{% endblock %}
+
+{% block body %}
+    <div class="top-bar">
+        <div>
+            <h1>Authors</h1>
+            <p class="subtitle">{{ authors|length }} author{{ authors|length != 1 ? 's' : '' }} in your catalog</p>
+        </div>
+        <a href="{{ path('author_new') }}" class="btn btn-primary">+ Add Author</a>
+    </div>
+
+    {% if authors|length == 0 %}
+        <div class="empty-state">
+            <p>No authors yet.</p>
+            <a href="{{ path('author_new') }}" class="btn btn-primary">Add your first author</a>
+        </div>
+    {% else %}
+        <div class="card-grid">
+            {% for author in authors %}
+                <div class="card">
+                    <h3>{{ author.name }}</h3>
+                    <p>{{ author.bio ? author.bio|slice(0, 90) ~ (author.bio|length > 90 ? '…' : '') : 'No bio available.' }}</p>
+                    <div class="card-actions">
+                        <a href="{{ path('author_edit', {id: author.id}) }}" class="btn btn-outline">Edit</a>
+                        <form method="post" action="{{ path('author_delete', {id: author.id}) }}" onsubmit="return confirm('Delete {{ author.name }}?');">
+                            <button type="submit" class="btn-danger-link">Delete</button>
+                        </form>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+{% endblock %}

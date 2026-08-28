@@ -1,0 +1,35 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Categories · Bookhive{% endblock %}
+
+{% block body %}
+    <div class="top-bar">
+        <div>
+            <h1>Categories</h1>
+            <p class="subtitle">{{ categories|length }} categor{{ categories|length != 1 ? 'ies' : 'y' }} in your catalog</p>
+        </div>
+        <a href="{{ path('category_new') }}" class="btn btn-primary">+ Add Category</a>
+    </div>
+
+    {% if categories|length == 0 %}
+        <div class="empty-state">
+            <p>No categories yet.</p>
+            <a href="{{ path('category_new') }}" class="btn btn-primary">Add your first category</a>
+        </div>
+    {% else %}
+        <div class="card-grid">
+            {% for category in categories %}
+                <div class="card">
+                    <h3>{{ category.name }}</h3>
+                    <p>Slug: <code>{{ category.slug }}</code></p>
+                    <div class="card-actions">
+                        <a href="{{ path('category_edit', {id: category.id}) }}" class="btn btn-outline">Edit</a>
+                        <form method="post" action="{{ path('category_delete', {id: category.id}) }}" onsubmit="return confirm('Delete {{ category.name }}?');">
+                            <button type="submit" class="btn-danger-link">Delete</button>
+                        </form>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+{% endblock %}

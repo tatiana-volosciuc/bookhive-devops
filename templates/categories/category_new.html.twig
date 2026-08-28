@@ -1,0 +1,20 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Add Category · Bookhive{% endblock %}
+
+{% block body %}
+    <h1>Add a New Category</h1>
+    <p class="subtitle"><a href="{{ path('category_list') }}">&larr; Back to Categories</a></p>
+
+    <form method="post">
+        <label for="name">Name *</label>
+        <input type="text" id="name" name="name" required value="{{ name|default('') }}">
+
+        <label for="slug">Slug *</label>
+        <input type="text" id="slug" name="slug" required value="{{ slug|default('') }}" placeholder="e.g. science-fiction">
+
+        <div style="margin-top: 24px;">
+            <button type="submit" class="btn btn-primary">Create Category</button>
+        </div>
+    </form>
+{% endblock %}

@@ -1,0 +1,23 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Edit Publisher · Bookhive{% endblock %}
+
+{% block body %}
+    <h1>Edit Publisher</h1>
+    <p class="subtitle"><a href="{{ path('publisher_list') }}">&larr; Back to Publishers</a></p>
+
+    <form method="post">
+        <label for="name">Name *</label>
+        <input type="text" id="name" name="name" required value="{{ name|default(publisher.name) }}">
+
+        <label for="website">Website</label>
+        <input type="text" id="website" name="website" value="{{ website|default(publisher.website) }}">
+
+        <label for="description">Description</label>
+        <textarea id="description" name="description" rows="4">{{ description|default(publisher.description) }}</textarea>
+
+        <div style="margin-top: 24px;">
+            <button type="submit" class="btn btn-primary">Save Changes</button>
+        </div>
+    </form>
+{% endblock %}

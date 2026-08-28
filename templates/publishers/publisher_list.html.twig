@@ -1,0 +1,38 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Publishers · Bookhive{% endblock %}
+
+{% block body %}
+    <div class="top-bar">
+        <div>
+            <h1>Publishers</h1>
+            <p class="subtitle">{{ publishers|length }} publisher{{ publishers|length != 1 ? 's' : '' }} in your catalog</p>
+        </div>
+        <a href="{{ path('publisher_new') }}" class="btn btn-primary">+ Add Publisher</a>
+    </div>
+
+    {% if publishers|length == 0 %}
+        <div class="empty-state">
+            <p>No publishers yet.</p>
+            <a href="{{ path('publisher_new') }}" class="btn btn-primary">Add your first publisher</a>
+        </div>
+    {% else %}
+        <div class="card-grid">
+            {% for publisher in publishers %}
+                <div class="card">
+                    <h3>{{ publisher.name }}</h3>
+                    <p>{{ publisher.description ? publisher.description|slice(0, 90) ~ (publisher.description|length > 90 ? '…' : '') : 'No description available.' }}</p>
+                    {% if publisher.website %}
+                        <p style="margin-top:-10px;"><a href="{{ publisher.website }}" target="_blank" rel="noopener">{{ publisher.website }}</a></p>
+                    {% endif %}
+                    <div class="card-actions">
+                        <a href="{{ path('publisher_edit', {id: publisher.id}) }}" class="btn btn-outline">Edit</a>
+                        <form method="post" action="{{ path('publisher_delete', {id: publisher.id}) }}" onsubmit="return confirm('Delete {{ publisher.name }}?');">
+                            <button type="submit" class="btn-danger-link">Delete</button>
+                        </form>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+{% endblock %}
