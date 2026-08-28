@@ -17,10 +17,10 @@ A Symfony-based bookshop catalog application, built primarily as a **DevOps lear
 - Business logic extracted into dedicated `*Service` classes, keeping controllers thin
 - Local MySQL connection configured via `.env` / `DATABASE_URL`
 
-Endpoints
+## Endpoints
 
-HTML CRUD pages are available at /books, /authors, /categories, and /publishers, with matching JSON create endpoints under /api/* for a couple of entities.
-Health endpoint: /health.
+- HTML CRUD pages are available at /books, /authors, /categories, and /publishers, with matching JSON create endpoints under /api/* for a couple of entities.
+- Health endpoint: /health.
 ## Local setup (quick reference)
 
 ```bash
