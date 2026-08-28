@@ -8,6 +8,7 @@ use Symfony\Component\HttpFoundation\RedirectResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
+use Psr\Log\LoggerInterface;
 use Twig\Environment;
 
 class AuthorController
@@ -16,12 +17,15 @@ class AuthorController
         private AuthorService $authorService,
         private Environment $twig,
         private AuthorRepository $authorRepository,
+        private LoggerInterface $logger,
     ) {
     }
 
     #[Route('/authors', name: 'author_list', methods: ['GET'])]
     public function list(): Response
     {
+        $this->logger->info('Monolog test: this is an info message');
+
         return $this->render('authors/author_list.html.twig', [
             'authors' => $this->authorRepository->findAll(),
         ]);
