@@ -51,9 +51,10 @@ Internet
 
 | Layer | Service | Notes |
 |---|---|---|
-| Compute | **ECS (Fargate)** or EC2 | Fargate recommended — no server patching, scales with the container image built in CI |
+| Compute | **ECS (Fargate)** — required | No EC2 fallback under consideration; Fargate only, to avoid server patching/management entirely |
 | Load balancing | **Application Load Balancer (ALB)** | Public-facing, terminates TLS, forwards to app target group |
-| Database | **RDS for MySQL** | Multi-AZ optional later; start single-AZ for a learning project to control cost |
+| Database | **RDS for MySQL — single-AZ (confirmed for now)** | Multi-AZ deliberately deferred to control cost; revisit once the app has real uptime requirements |
+| Static assets / frontend | **S3 + CloudFront** | If any static frontend or public assets are served, the S3 bucket must **not** be publicly accessible directly — CloudFront sits in front of it (Origin Access Control), and only CloudFront is allowed to read from the bucket |
 | Networking | **VPC** with public + private subnets across 2 Availability Zones | Standard 2-AZ setup for basic resilience |
 | DNS | **Route 53** | Domain (TBD) → ALB via alias record |
 | TLS | **ACM (AWS Certificate Manager)** | Free, auto-renewing cert attached to the ALB listener |
@@ -77,6 +78,8 @@ Internet
 
 No security group allows direct internet ingress to `app-sg` or `db-sg` — both are only reachable from the layer above them.
 
+**S3 bucket policy (not a security group, but the equivalent control):** the bucket policy must restrict `s3:GetObject` to requests coming from the CloudFront distribution only (via Origin Access Control), with all other principals denied. The bucket should also have "Block all public access" enabled at the bucket level — CloudFront reaches it through OAC, not through public bucket permissions.
+
 ### 3.5 DNS
 
 - Domain (TBD) registered or delegated to **Route 53**
@@ -89,11 +92,12 @@ App tasks route outbound traffic (for Composer/package pulls during build, not r
 
 ## 4. Open questions / decisions still needed
 
-- [ ] ECS Fargate vs. EC2-backed ECS (Fargate recommended for a learning project — less to manage)
+- [x] ~~ECS Fargate vs. EC2-backed ECS~~ — **decided: Fargate only**
+- [x] ~~RDS Multi-AZ vs. single-AZ~~ — **decided: single-AZ for now**
 - [ ] Single app task vs. multiple (affects whether session storage needs to move off native PHP sessions to something shared, e.g. ElastiCache/Redis)
-- [ ] RDS instance size and Multi-AZ vs. single-AZ (cost vs. resilience tradeoff)
 - [ ] Domain name to register/use with Route 53
 - [ ] Whether a NAT Gateway is needed long-term, or if VPC endpoints (S3, ECR) can remove that cost entirely
+- [ ] Whether the app actually needs a static frontend served from S3, or if this is purely Twig server-rendered (if no static frontend exists, the S3 + CloudFront layer can be dropped from this plan entirely)
 
 ## 5. Non-goals
 
