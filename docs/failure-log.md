@@ -39,3 +39,30 @@ Format: one entry per deliberate break/fix cycle. Fill in **Symptom** and **Hypo
 - **Time to diagnose:** ~10 minutes (including diagnosis via SSM + `curl localhost`)
 
 ---
+
+# Docker Build Failures
+
+## Entry 1
+
+- **Symptom:** `docker build` failed with `sed: can't read WORKDIR: No such file or directory` and `sed: couldn't edit /var/www/html: not a regular file`.
+- **Hypothesis:** The `sed` command syntax itself was wrong, or the file path was incorrect.
+- **Actual cause:** A stray trailing backslash (`\`) at the end of the `sed` command's last line caused the shell to treat the next Dockerfile instruction (`WORKDIR /var/www/html`) as a continuation of the same `RUN` command, rather than a separate instruction. Collapsing the `sed` command onto a single line (no backslashes) fixed it permanently, since there was no continuation left to break.
+- **Time to diagnose:** ~10 minutes
+
+---
+
+## Entry 2
+
+- **Symptom:** `curl` to `/health` returned HTTP 200, but with a fatal PHP error in the body: `Unable to read the "/var/www/html/.env" environment file`.
+- **Hypothesis:** The `.env` file wasn't being copied into the image, or the app expected it in a different path.
+- **Actual cause:** `.dockerignore` explicitly excluded `.env` (not just `.env.local*`), so the base `.env` file — which Symfony expects to exist and ship with the app — never made it into the build context at all. Symfony's Dotenv component throws a fatal error if no `.env` file exists, regardless of environment. Removing the bare `.env` line from `.dockerignore` (keeping only `.env.local*` excluded) fixed it.
+- **Time to diagnose:** ~15 minutes
+
+---
+
+## Entry 3
+
+- **Symptom:** After fixing Entry 2, `curl` to `/health` returned HTTP 500 with `ClassNotFoundError: Attempted to load class "MakerBundle" from namespace "Symfony\Bundle\MakerBundle"`.
+- **Hypothesis:** A missing `use` statement or a typo in `config/bundles.php`.
+- **Actual cause:** `config/bundles.php` correctly marks `MakerBundle` as `'dev' => true`, but the Dockerfile ran `composer install --no-dev`, which never installs dev-only packages like `symfony/maker-bundle` in the first place. The class was referenced in the bundle list but physically absent from `vendor/`. Since this image was meant to behave like local dev (not a slim prod build), removing `--no-dev` from both `composer install` and `composer dump-autoload` fixed it by actually installing the dev dependencies the bundle list expects.
+- **Time to diagnose:** ~20 minutes
