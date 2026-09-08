@@ -2,3 +2,5 @@ vendor/
 var/cache/*
 var/log/*
 *.log
+.env
+.env.example
