@@ -33,9 +33,6 @@ jobs:
             -p 8080:8000 \
             --name bookhive-ci \
             --entrypoint php \
-            -e APP_ENV=prod \
-            -e APP_SECRET=ci-secret \
-            -e DATABASE_URL="sqlite:///%kernel.project_dir%/var/data.db" \
             bookhive:ci-${{ github.sha }} \
             -S 0.0.0.0:8000 -t public public/index.php
 
