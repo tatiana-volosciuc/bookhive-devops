@@ -1,4 +1,5 @@
-vendor/
-var/cache/*
-var/log/*
+/vendor/
+/terraform/
+/var/cache/*
+/var/log/*
 *.log
