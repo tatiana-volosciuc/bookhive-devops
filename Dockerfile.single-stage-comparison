@@ -1,0 +1,27 @@
+# SINGLE-STAGE VERSION — for size comparison only, not for real use.
+# This bakes the Composer binary and all build tooling into the final image,
+# which is exactly what multi-stage avoids.
+FROM php:8.4-fpm
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        libicu-dev \
+        libzip-dev \
+        unzip \
+        git \
+    && docker-php-ext-install -j$(nproc) \
+        pdo_mysql \
+        intl \
+        zip \
+        opcache \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+# Composer binary copied in directly — this alone is dozens of MB
+COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
+
+WORKDIR /var/www/html
+COPY . .
+RUN composer install --no-scripts --no-interaction --prefer-dist \
+    && composer dump-autoload --optimize
+
+CMD ["php-fpm"]
