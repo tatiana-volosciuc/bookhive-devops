@@ -39,60 +39,23 @@
   (no Compose plugin needed — running plain `docker run`, not Compose)
 - [x] Git installed 
 - [x] App code source: `git clone https://github.com/tatiana-volosciuc/bookhive-devops.git` into `/opt/bookhive`
-- [ ] `.env` / `DATABASE_URL` and other secrets set on the instance — how: __________
-  (note: for this phase these live directly on the instance, passed via `-e` flags on `docker run`; flag this as a gap, not a final answer — Secrets Manager/SSM Parameter Store is the real target per the network plan)
-- [ ] Docker network created: `docker network create bookhive-net`
-- [ ] `db` container run:
-```
-  docker run -d --name db --network bookhive-net \
-    -e MYSQL_DATABASE=____ -e MYSQL_USER=____ \
-    -e MYSQL_PASSWORD=____ -e MYSQL_ROOT_PASSWORD=____ \
-    -v db-data:/var/lib/mysql mysql:8
-```
-- [ ] `app` image built: `docker build -t bookhive-app .`
-- [ ] `app` container run:
-```
-  docker run -d --name app --network bookhive-net \
-    -e DATABASE_URL="mysql://____:____@db:3306/____" bookhive-app
-```
-- [ ] `nginx.conf` written with `fastcgi_pass app:9000;` at: `____________`
-- [ ] `web` container run:
-```
-  docker run -d --name web --network bookhive-net -p 8000:80 \
-    -v ____________/nginx.conf:/etc/nginx/conf.d/default.conf:ro nginx:alpine
-```
-- [ ] All three confirmed running: `docker ps` shows `app`, `web`, `db`
-- [ ] **Database data volume**: `db-data` — confirmed this is a **named Docker volume on the instance's own root EBS volume**, not a separate EBS volume. It survives container restart/recreate but **not** instance termination.
-  (this is the thing that makes "if this instance dies" either survivable or not — write it down precisely, don't leave it vague)
-- [ ] Any manual edits made directly on the instance that aren't captured anywhere else: __________
-## 6. Verifying access without port 22
-
-- [ ] Connected via: `aws ssm start-session --target i-________`
-- [ ] Verified app response via SSM port forwarding:
-  ```
-  aws ssm start-session --target i-________ \
-    --document-name AWS-StartPortForwardingSession \
-    --parameters '{"portNumber":["____"],"localPortNumber":["____"]}'
-  ```
+- [x] Docker network created: `docker network create bookhive-net`
+- [x] docker run -d -p 8080:8000 --name bookhive-app   --entrypoint php   bookhive:app   -S 0.0.0.0:8000 -t public public/index.php
 - [x] Confirmed `curl -i http://localhost:8080/health` returned expected response.
 
 ## 7. "If this instance dies right now" — actual current answer
 
 Write the true answer for what you actually built, not the ideal one:
 
-- Is there an Auto Scaling Group? Y/N — if no, a dead instance means: __________
-- Is app data stored anywhere off-instance (RDS/S3/DynamoDB/EFS)? __________
-- MySQL running as a container on this same instance — is its data volume on a **separate EBS volume** that could theoretically be reattached, or on the instance's root volume / an unbacked container layer? __________
-- If no ASG and no external data, what is the manual recovery procedure? __________
-- Honest bottom line for this phase: __________
+- Is there an Auto Scaling Group? Y/N — if no, a dead instance means: It means the EC2 instance stops running and isn't come back on it's own.
+- Is app data stored anywhere off-instance (RDS/S3/DynamoDB/EFS)? Not yet, planning RDS for db and S3 for media files.
 
 ## 8. Teardown
 
 - [x] Instance terminated: `i-0cdb924d5bdab41c4`
 - [x] NAT Gateway deleted (if created)
 - [x] Elastic IP released (if allocated)
-- [ ] Security groups deleted
-- [ ] Subnets / VPC deleted (if purpose-built for this)
+- [x] Security groups deleted
 
 ---
 *Last updated: 07/09/2026 by Tatiana Volosciuc*
