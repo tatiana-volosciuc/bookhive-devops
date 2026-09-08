@@ -46,6 +46,12 @@ COPY --from=composer_deps --chown=appuser:appuser /app ./
 RUN mkdir -p var/cache var/log \
     && chown -R appuser:appuser var
 
+# The .env file itself is excluded from the build context for security, so
+# fall back to .env.example to give Symfony's Dotenv component a file to
+# read. Real secrets should still be supplied via runtime environment
+# variables, which take precedence over anything defined here.
+RUN if [ ! -f .env ]; then cp .env.example .env; fi
+
 USER appuser
 
 EXPOSE 9000
