@@ -35,6 +35,13 @@ jobs:
       - name: Install dependencies
         run: composer install --prefer-dist --no-progress --no-interaction
 
+      - name: Ensure base .env file exists
+        run: |
+          if [ ! -f .env ]; then
+            echo "APP_ENV=dev" > .env
+            echo "APP_SECRET=ci_placeholder_secret" >> .env
+          fi
+
       - name: Configure test database (SQLite)
         run: |
           echo 'DATABASE_URL="sqlite:///%kernel.project_dir%/var/data_test.db"' > .env.test.local
