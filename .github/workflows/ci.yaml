@@ -7,7 +7,48 @@ on:
     branches: [main]
 
 jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: mbstring, pdo_sqlite, sqlite3, dom, curl, zip, intl, opcache
+          coverage: none
+
+      - name: Get composer cache directory
+        id: composer-cache
+        run: echo "dir=$(composer config cache-files-dir)" >> $GITHUB_OUTPUT
+
+      - name: Cache composer dependencies
+        uses: actions/cache@v4
+        with:
+          path: ${{ steps.composer-cache.outputs.dir }}
+          key: ${{ runner.os }}-composer-${{ hashFiles('**/composer.lock') }}
+          restore-keys: ${{ runner.os }}-composer-
+
+      - name: Install dependencies
+        run: composer install --prefer-dist --no-progress --no-interaction
+
+      - name: Configure test database (SQLite)
+        run: |
+          echo 'DATABASE_URL="sqlite:///%kernel.project_dir%/var/data_test.db"' > .env.test.local
+
+      - name: Create test schema
+        run: |
+          php bin/console doctrine:database:create --env=test --if-not-exists || true
+          php bin/console doctrine:schema:create --env=test
+
+      - name: Run PHPUnit
+        run: vendor/bin/phpunit
+
   build-and-verify:
+    needs: test
     runs-on: ubuntu-latest
 
     steps:
