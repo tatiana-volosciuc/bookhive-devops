@@ -87,6 +87,13 @@ jobs:
       - name: Install dependencies
         run: composer install --prefer-dist --no-progress --no-interaction
 
+      - name: Ensure base .env file exists
+        run: |
+            if [ ! -f .env ]; then
+              echo "APP_ENV=dev" > .env
+              echo "APP_SECRET=ci_placeholder_secret" >> .env
+            fi
+
       - name: Configure database URL
         run: |
           echo 'DATABASE_URL="mysql://bookhive:bookhive@127.0.0.1:3306/bookhive_test?serverVersion=8.0&charset=utf8mb4"' > .env.local
