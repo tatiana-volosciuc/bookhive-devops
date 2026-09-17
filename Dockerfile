@@ -52,8 +52,12 @@ RUN mkdir -p var/cache var/log \
 # variables, which take precedence over anything defined here.
 RUN if [ ! -f .env ]; then cp .env.example .env; fi
 
+COPY --chown=appuser:appuser docker/php/entrypoint.sh /usr/local/bin/entrypoint.sh
+RUN chmod +x /usr/local/bin/entrypoint.sh
+
 USER appuser
 
 EXPOSE 9000
 
+ENTRYPOINT ["entrypoint.sh"]
 CMD ["php-fpm"]
