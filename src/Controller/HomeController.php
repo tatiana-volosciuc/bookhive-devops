@@ -25,10 +25,10 @@ class HomeController
         PublisherRepository $publisherRepository,
     ): Response {
         return new Response($this->twig->render('home.html.twig', [
-            'bookCount' => $bookRepository->count([]),
-            'authorCount' => $authorRepository->count([]),
-            'categoryCount' => $categoryRepository->count([]),
-            'publisherCount' => $publisherRepository->count([]),
+            'bookCount' => $bookRepository->count(),
+            'authorCount' => $authorRepository->count(),
+            'categoryCount' => $categoryRepository->count(),
+            'publisherCount' => $publisherRepository->count(),
         ]));
     }
 }

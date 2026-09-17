@@ -1,11 +1,13 @@
 parameters:
+  authors_photo_directory: '%kernel.project_dir%/public/uploads/authors'
 
 services:
-    _defaults:
-        autowire: true
-        autoconfigure: true
+  _defaults:
+    autowire: true
+    autoconfigure: true
 
-    App\:
-        resource: '../src/'
-        exclude:
-            - '../src/Kernel.php'
+  App\:
+    resource: '../src/'
+    exclude:
+      - '../src/Kernel.php'
+
