@@ -37,3 +37,15 @@ variable "db_instance_class" {
   type    = string
   default = "db.t3.micro"
 }
+
+variable "kms_key_arn" {
+  description = "ARN of the KMS key used to encrypt the RDS storage"
+  type        = string
+  default     = null
+}
+
+variable "env" {
+  description = "Environment name (dev/staging/prod)"
+  type        = string
+  default     = "dev"
+}

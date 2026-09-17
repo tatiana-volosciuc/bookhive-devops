@@ -27,7 +27,7 @@ resource "aws_subnet" "private_a" {
   cidr_block              = var.private_subnet_cidr_a
   availability_zone       = data.aws_availability_zones.available.names[0]
   map_public_ip_on_launch = false
-  tags = { Name = "${var.project}-private" }
+  tags = { Name = "${var.project}-private-a" }
 }
 
 resource "aws_subnet" "private_b" {
@@ -88,6 +88,12 @@ resource "aws_db_subnet_group" "db" {
   tags       = { Name = "${var.project}-db-subnet-group" }
 }
 
+# Picks up whichever snapshot of this instance was taken most recently (e.g. after running migrations)
+data "aws_db_snapshot" "latest" {
+  db_instance_identifier = "${var.project}-db"
+  most_recent            = true
+}
+
 resource "aws_db_instance" "main" {
   identifier              = "${var.project}-db"
   engine                  = "mysql"
@@ -101,8 +107,14 @@ resource "aws_db_instance" "main" {
   db_subnet_group_name    = aws_db_subnet_group.db.name
   vpc_security_group_ids  = [aws_security_group.db.id]
   publicly_accessible     = false
+
   storage_encrypted       = true
-  skip_final_snapshot     = true              # true for dev; false for prod
+#   kms_key_id              = var.kms_key_arn
+
+  snapshot_identifier     = data.aws_db_snapshot.latest.id  # Always restores from whichever snapshot of this instance is newest
+
+  skip_final_snapshot     = var.env == "prod" ? false : true
+  final_snapshot_identifier = var.env == "prod" ? "${var.project}-db-final-${formatdate("YYYYMMDD-hhmm", timestamp())}" : null
 }
 
 output "db_endpoint" {
