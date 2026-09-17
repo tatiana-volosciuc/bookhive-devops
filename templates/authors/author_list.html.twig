@@ -20,6 +20,9 @@
         <div class="card-grid">
             {% for author in authors %}
                 <div class="card">
+                    {% if author.photoKey %}
+                        <img src="{{ asset('uploads/authors/' ~ author.photoKey) }}" alt="{{ author.name }}" style="width: 100%; max-height: 150px; object-fit: cover; border-radius: 4px; margin-bottom: 8px;">
+                    {% endif %}
                     <h3>{{ author.name }}</h3>
                     <p>{{ author.bio ? author.bio|slice(0, 90) ~ (author.bio|length > 90 ? '…' : '') : 'No bio available.' }}</p>
                     <div class="card-actions">

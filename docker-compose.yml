@@ -6,8 +6,8 @@ services:
     container_name: symfony_php
     restart: unless-stopped
     volumes:
-      - ./var/log:/var/www/html/var/log
-      - ./var/cache:/var/www/html/var/cache
+      - .:/var/www/html
+      - /var/www/html/vendor
     environment:
       APP_ENV: ${APP_ENV:-dev}
       DATABASE_URL: mysql://${DB_USER}:${DB_PASSWORD}@mysql:3306/${DB_NAME}?serverVersion=8.0
