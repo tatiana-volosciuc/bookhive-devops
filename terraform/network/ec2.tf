@@ -3,8 +3,9 @@ data "aws_ami" "al2023" {
   owners      = ["amazon"]
 
   filter {
+    # "al2023-ami-*" also matches the minimal variant (no SSM Agent); pin to the standard image
     name   = "name"
-    values = ["al2023-ami-*-x86_64"]
+    values = ["al2023-ami-2023.*-x86_64"]
   }
   filter {
     name   = "virtualization-type"
@@ -15,7 +16,7 @@ data "aws_ami" "al2023" {
 resource "aws_instance" "app" {
   ami                         = data.aws_ami.al2023.id
   instance_type               = var.instance_type
-  subnet_id                   = aws_subnet.private.id
+  subnet_id                   = aws_subnet.private_a.id
   vpc_security_group_ids      = [aws_security_group.app.id]
   iam_instance_profile        = aws_iam_instance_profile.app_instance.name
   associate_public_ip_address = false

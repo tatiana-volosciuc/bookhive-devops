@@ -18,6 +18,19 @@ resource "aws_iam_role_policy_attachment" "ssm_core" {
   policy_arn = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
 }
 
+resource "aws_iam_role_policy" "app_secrets" {
+  name = "${var.project}-app-secrets-read"
+  role = aws_iam_role.app_instance.id
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect   = "Allow"
+      Action   = "secretsmanager:GetSecretValue"
+      Resource = aws_db_instance.main.master_user_secret[0].secret_arn
+    }]
+  })
+}
+
 resource "aws_iam_instance_profile" "app_instance" {
   name = "${var.project}-app-instance-profile"
   role = aws_iam_role.app_instance.name
