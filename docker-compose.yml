@@ -6,7 +6,6 @@ services:
     container_name: symfony_php
     restart: unless-stopped
     volumes:
-      # Mount the whole project so files created in-container (e.g. via make:migration) persist to the host repo
       - .:/var/www/html
       - /var/www/html/vendor
     environment:
