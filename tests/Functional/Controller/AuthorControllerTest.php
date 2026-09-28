@@ -24,7 +24,12 @@ class AuthorControllerTest extends WebTestCase
         $this->entityManager = $container->get(EntityManagerInterface::class);
         $this->authorRepository = $container->get(AuthorRepository::class);
 
-        $this->entityManager->createQuery('DELETE FROM App\Entity\Author')->execute();
+        // Wipe tables before each test, respecting FK order: book_author references author,
+        // so it must be cleared first. This also protects against leftover rows from
+        // other test classes (e.g. BookControllerTest) that reference authors.
+        $connection = $this->entityManager->getConnection();
+        $connection->executeStatement('DELETE FROM book_author');
+        $connection->executeStatement('DELETE FROM author');
     }
 
     protected function tearDown(): void

@@ -24,7 +24,10 @@ class PublisherControllerTest extends WebTestCase
         $this->entityManager = $container->get(EntityManagerInterface::class);
         $this->publisherRepository = $container->get(PublisherRepository::class);
 
-        $this->entityManager->createQuery('DELETE FROM App\Entity\Publisher')->execute();
+        $connection = $this->entityManager->getConnection();
+        $connection->executeStatement('DELETE FROM book_author');
+        $connection->executeStatement('DELETE FROM book');
+        $connection->executeStatement('DELETE FROM publisher');
     }
 
     protected function tearDown(): void
