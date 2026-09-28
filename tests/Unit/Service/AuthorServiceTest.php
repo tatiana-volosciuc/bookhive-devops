@@ -9,6 +9,8 @@ use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\MockObject\Stub;
 use PHPUnit\Framework\TestCase;
+use Symfony\Component\Filesystem\Filesystem;
+use Symfony\Component\HttpFoundation\File\UploadedFile;
 use Symfony\Component\Validator\ConstraintViolation;
 use Symfony\Component\Validator\ConstraintViolationList;
 use Symfony\Component\Validator\Validator\ValidatorInterface;
@@ -17,14 +19,16 @@ class AuthorServiceTest extends TestCase
 {
     private EntityManagerInterface&MockObject $entityManager;
     private ValidatorInterface&Stub $validator;
+    private Filesystem&MockObject $filesystem;
     private AuthorService $service;
 
     protected function setUp(): void
     {
         $this->entityManager = $this->createMock(EntityManagerInterface::class);
         $this->validator = $this->createStub(ValidatorInterface::class);
+        $this->filesystem = $this->createMock(Filesystem::class);
 
-        $this->service = new AuthorService($this->entityManager, $this->validator);
+        $this->service = new AuthorService($this->entityManager, $this->validator, $this->filesystem, '/tmp/authors_photos');
     }
 
     #[AllowMockObjectsWithoutExpectations]
@@ -99,6 +103,76 @@ class AuthorServiceTest extends TestCase
         ]);
 
         $this->assertSame([], $errors);
+    }
+
+    public function testCreateFromDataReturnsPhotoSizeValidationErrorWithoutPersisting(): void
+    {
+        $photo = $this->createMock(UploadedFile::class);
+        $photo->method('isValid')->willReturn(true);
+        $photo->method('getSize')->willReturn((5 * 1024 * 1024) + 1);
+
+        $this->entityManager->expects($this->never())->method('persist');
+        $this->entityManager->expects($this->never())->method('flush');
+
+        $errors = $this->service->createFromData([
+            'name' => 'Jane Austen',
+            'bio' => 'English novelist.',
+        ], $photo);
+
+        $this->assertSame(['Photo must be smaller than 5 MB.'], $errors);
+    }
+
+    public function testCreateFromDataReturnsPhotoMimeValidationErrorWithoutPersisting(): void
+    {
+        $photo = $this->createMock(UploadedFile::class);
+        $photo->method('isValid')->willReturn(true);
+        $photo->method('getSize')->willReturn(1024);
+        $photo->method('getMimeType')->willReturn('application/pdf');
+
+        $this->entityManager->expects($this->never())->method('persist');
+        $this->entityManager->expects($this->never())->method('flush');
+
+        $errors = $this->service->createFromData([
+            'name' => 'Jane Austen',
+            'bio' => 'English novelist.',
+        ], $photo);
+
+        $this->assertSame(['Photo must be a JPEG, PNG, WEBP, or GIF image.'], $errors);
+    }
+
+    public function testCreateFromDataMovesUploadedPhotoAndStoresPhotoKey(): void
+    {
+        $this->validator
+            ->method('validate')
+            ->willReturn(new ConstraintViolationList());
+
+        $photo = $this->createMock(UploadedFile::class);
+        $photo->method('isValid')->willReturn(true);
+        $photo->method('getSize')->willReturn(2048);
+        $photo->method('getMimeType')->willReturn('image/png');
+        $photo->method('guessExtension')->willReturn('png');
+        $photo->expects($this->once())
+            ->method('move')
+            ->with('/tmp/authors_photos', $this->callback(static fn (string $filename): bool => str_ends_with($filename, '.png')));
+
+        $capturedAuthor = null;
+        $this->entityManager
+            ->expects($this->once())
+            ->method('persist')
+            ->willReturnCallback(function ($entity) use (&$capturedAuthor): void {
+                $capturedAuthor = $entity;
+            });
+        $this->entityManager->expects($this->once())->method('flush');
+
+        $errors = $this->service->createFromData([
+            'name' => 'Jane Austen',
+            'bio' => 'English novelist.',
+        ], $photo);
+
+        $this->assertSame([], $errors);
+        $this->assertInstanceOf(Author::class, $capturedAuthor);
+        $this->assertNotNull($capturedAuthor->getPhotoKey());
+        $this->assertStringEndsWith('.png', $capturedAuthor->getPhotoKey());
     }
 
     #[AllowMockObjectsWithoutExpectations]
@@ -211,6 +285,45 @@ class AuthorServiceTest extends TestCase
         $this->assertSame('Updated bio.', $author->getBio());
     }
 
+    public function testUpdateFromDataReplacesPhotoAndDeletesPreviousStoredFile(): void
+    {
+        $author = new Author();
+        $author->setName('Original Name');
+        $author->setPhotoKey('old-photo.png');
+
+        $this->validator
+            ->method('validate')
+            ->willReturn(new ConstraintViolationList());
+
+        $photo = $this->createMock(UploadedFile::class);
+        $photo->method('isValid')->willReturn(true);
+        $photo->method('getSize')->willReturn(2048);
+        $photo->method('getMimeType')->willReturn('image/jpeg');
+        $photo->method('guessExtension')->willReturn('jpg');
+        $photo->expects($this->once())
+            ->method('move')
+            ->with('/tmp/authors_photos', $this->callback(static fn (string $filename): bool => str_ends_with($filename, '.jpg')));
+
+        $this->filesystem->method('exists')->willReturnMap([
+            ['/tmp/authors_photos/old-photo.png', true],
+        ]);
+        $this->filesystem
+            ->expects($this->once())
+            ->method('remove')
+            ->with('/tmp/authors_photos/old-photo.png');
+
+        $this->entityManager->expects($this->once())->method('flush');
+
+        $errors = $this->service->updateFromData($author, [
+            'name' => 'Updated Name',
+            'bio' => 'Updated bio.',
+        ], $photo);
+
+        $this->assertSame([], $errors);
+        $this->assertNotSame('old-photo.png', $author->getPhotoKey());
+        $this->assertStringEndsWith('.jpg', $author->getPhotoKey());
+    }
+
     public function testDeleteRemovesAndFlushesAuthor(): void
     {
         $author = new Author();
@@ -221,6 +334,26 @@ class AuthorServiceTest extends TestCase
             ->method('remove')
             ->with($author);
 
+        $this->entityManager->expects($this->once())->method('flush');
+
+        $this->service->delete($author);
+    }
+
+    public function testDeleteRemovesStoredPhotoWhenPresent(): void
+    {
+        $author = new Author();
+        $author->setName('To Be Deleted');
+        $author->setPhotoKey('author-photo.png');
+
+        $this->filesystem->method('exists')->willReturnMap([
+            ['/tmp/authors_photos/author-photo.png', true],
+        ]);
+        $this->filesystem
+            ->expects($this->once())
+            ->method('remove')
+            ->with('/tmp/authors_photos/author-photo.png');
+
+        $this->entityManager->expects($this->once())->method('remove')->with($author);
         $this->entityManager->expects($this->once())->method('flush');
 
         $this->service->delete($author);

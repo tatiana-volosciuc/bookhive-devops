@@ -22,6 +22,9 @@ class Author
     #[ORM\Column(type: Types::TEXT, nullable: true)]
     private ?string $bio = null;
 
+    #[ORM\Column(length: 255, nullable: true)]
+    private ?string $photoKey = null;
+
     /**
      * @var Collection<int, Book>
      */
@@ -58,6 +61,18 @@ class Author
     public function setBio(?string $bio): static
     {
         $this->bio = $bio;
+
+        return $this;
+    }
+
+    public function getPhotoKey(): ?string
+    {
+        return $this->photoKey;
+    }
+
+    public function setPhotoKey(?string $photoKey): static
+    {
+        $this->photoKey = $photoKey;
 
         return $this;
     }

@@ -6,12 +6,18 @@
     <h1>Edit Author</h1>
     <p class="subtitle"><a href="{{ path('author_list') }}">&larr; Back to Authors</a></p>
 
-    <form method="post">
+    <form method="post" enctype="multipart/form-data">
         <label for="name">Name *</label>
         <input type="text" id="name" name="name" required value="{{ name|default(author.name) }}">
 
         <label for="bio">Bio</label>
         <textarea id="bio" name="bio" rows="4">{{ bio|default(author.bio) }}</textarea>
+
+        {% if author.photoKey %}
+            <p><img src="{{ asset('uploads/authors/' ~ author.photoKey) }}" alt="{{ author.name }}" style="max-width: 150px; display: block; margin-bottom: 8px;"></p>
+        {% endif %}
+        <label for="photo">{{ author.photoKey ? 'Replace Photo' : 'Photo' }}</label>
+        <input type="file" id="photo" name="photo" accept="image/*">
 
         <div style="margin-top: 24px;">
             <button type="submit" class="btn btn-primary">Save Changes</button>

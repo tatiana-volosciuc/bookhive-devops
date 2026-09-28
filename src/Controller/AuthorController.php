@@ -36,7 +36,8 @@ class AuthorController
     {
         if ($request->isMethod('POST')) {
             $data = $this->extractAuthorData($request);
-            $errors = $this->authorService->createFromData($data);
+            $photo = $request->files->get('photo');
+            $errors = $this->authorService->createFromData($data, $photo);
 
             if (!empty($errors)) {
                 $this->flashErrors($request, $errors);
@@ -62,7 +63,8 @@ class AuthorController
 
         if ($request->isMethod('POST')) {
             $data = $this->extractAuthorData($request);
-            $errors = $this->authorService->updateFromData($author, $data);
+            $photo = $request->files->get('photo');
+            $errors = $this->authorService->updateFromData($author, $data, $photo);
 
             if (!empty($errors)) {
                 $this->flashErrors($request, $errors);
