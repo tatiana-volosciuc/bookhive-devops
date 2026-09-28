@@ -1,0 +1,15 @@
+[
+    {
+        "State": "running",
+        "LaunchTime": "2026-09-16T15:06:35+00:00",
+        "VpcId": "vpc-06d6bf43ee2796694",
+        "SubnetId": "subnet-06a5c46ebd197c709",
+        "SGs": [
+            {
+                "GroupId": "sg-0ed4eca3910fe063d",
+                "GroupName": "bookhive-app-sg"
+            }
+        ],
+        "IamProfile": "arn:aws:iam::089340568250:instance-profile/bookhive-app-instance-profile"
+    }
+]

@@ -18,19 +18,16 @@ class CategoryControllerTest extends WebTestCase
     {
         parent::setUp();
 
-        // Create the client ONCE per test. createClient() boots the kernel
-        // internally — calling it again later (or calling bootKernel() separately)
-        // throws "kernel should only be booted once".
         $this->client = static::createClient();
 
         $container = static::getContainer();
         $this->entityManager = $container->get(EntityManagerInterface::class);
         $this->categoryRepository = $container->get(CategoryRepository::class);
 
-        // Wipe the table before each test so tests don't leak state into each other.
-        // If you set up DAMADoctrineTestBundle for transaction rollback, you can
-        // remove this line.
-        $this->entityManager->createQuery('DELETE FROM App\Entity\Category')->execute();
+        $connection = $this->entityManager->getConnection();
+        $connection->executeStatement('DELETE FROM book_author');
+        $connection->executeStatement('DELETE FROM book');
+        $connection->executeStatement('DELETE FROM category');
     }
 
     protected function tearDown(): void

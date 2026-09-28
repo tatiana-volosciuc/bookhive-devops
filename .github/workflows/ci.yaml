@@ -44,10 +44,12 @@ jobs:
 
       - name: Configure test database (SQLite)
         run: |
-          echo 'DATABASE_URL="sqlite:///%kernel.project_dir%/var/data_test.db"' > .env.test.local
+          mkdir -p var
+          echo "DATABASE_URL=\"sqlite:///$GITHUB_WORKSPACE/var/data_test.db\"" > .env.test.local
 
       - name: Create test schema
         run: |
+          mkdir -p var
           php bin/console doctrine:database:create --env=test --if-not-exists || true
           php bin/console doctrine:schema:create --env=test
 
@@ -89,10 +91,10 @@ jobs:
 
       - name: Ensure base .env file exists
         run: |
-            if [ ! -f .env ]; then
-              echo "APP_ENV=dev" > .env
-              echo "APP_SECRET=ci_placeholder_secret" >> .env
-            fi
+          if [ ! -f .env ]; then
+            echo "APP_ENV=dev" > .env
+            echo "APP_SECRET=ci_placeholder_secret" >> .env
+          fi
 
       - name: Configure database URL
         run: |
@@ -170,3 +172,4 @@ jobs:
       - name: Clean up
         if: always()
         run: docker rm -f bookhive-ci || true
+

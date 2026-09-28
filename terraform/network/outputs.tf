@@ -2,8 +2,8 @@ output "instance_id" {
   value = aws_instance.app.id
 }
 
-output "private_subnet_id" {
-  value = aws_subnet.private.id
+output "private_subnet_a_id" {
+  value = aws_subnet.private_a.id
 }
 
 output "vpc_id" {
