@@ -6,12 +6,15 @@
     <h1>Add a New Author</h1>
     <p class="subtitle"><a href="{{ path('author_list') }}">&larr; Back to Authors</a></p>
 
-    <form method="post">
+    <form method="post" enctype="multipart/form-data">
         <label for="name">Name *</label>
         <input type="text" id="name" name="name" required value="{{ name|default('') }}">
 
         <label for="bio">Bio</label>
         <textarea id="bio" name="bio" rows="4">{{ bio|default('') }}</textarea>
+
+        <label for="photo">Photo</label>
+        <input type="file" id="photo" name="photo" accept="image/*">
 
         <div style="margin-top: 24px;">
             <button type="submit" class="btn btn-primary">Create Author</button>
