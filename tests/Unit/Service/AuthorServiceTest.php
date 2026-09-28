@@ -9,6 +9,7 @@ use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\MockObject\Stub;
 use PHPUnit\Framework\TestCase;
+use Symfony\Component\Filesystem\Filesystem;
 use Symfony\Component\Validator\ConstraintViolation;
 use Symfony\Component\Validator\ConstraintViolationList;
 use Symfony\Component\Validator\Validator\ValidatorInterface;
@@ -17,14 +18,16 @@ class AuthorServiceTest extends TestCase
 {
     private EntityManagerInterface&MockObject $entityManager;
     private ValidatorInterface&Stub $validator;
+    private Filesystem&Stub $filesystem;
     private AuthorService $service;
 
     protected function setUp(): void
     {
         $this->entityManager = $this->createMock(EntityManagerInterface::class);
         $this->validator = $this->createStub(ValidatorInterface::class);
+        $this->filesystem = $this->createStub(Filesystem::class);
 
-        $this->service = new AuthorService($this->entityManager, $this->validator);
+        $this->service = new AuthorService($this->entityManager, $this->validator, $this->filesystem, '/tmp/authors_photos');
     }
 
     #[AllowMockObjectsWithoutExpectations]
