@@ -44,6 +44,7 @@ jobs:
 
       - name: Configure test database (SQLite)
         run: |
+          mkdir -p var
           echo 'DATABASE_URL="sqlite:///%kernel.project_dir%/var/data_test.db"' > .env.test.local
 
       - name: Create test schema
