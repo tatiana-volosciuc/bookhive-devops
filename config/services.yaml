@@ -12,4 +12,7 @@ services:
     arguments:
       - version: 'latest'
         region: '%env(AWS_REGION)%'
+        credentials:
+          key: '%env(AWS_ACCESS_KEY_ID)%'
+          secret: '%env(AWS_SECRET_ACCESS_KEY)%'
 

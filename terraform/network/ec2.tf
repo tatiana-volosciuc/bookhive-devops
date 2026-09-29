@@ -22,5 +22,11 @@ resource "aws_instance" "app" {
   associate_public_ip_address = false
   user_data                   = file("${path.module}/user_data.sh")
 
+  metadata_options {
+    http_endpoint               = "enabled"
+    http_tokens                 = "required"
+    http_put_response_hop_limit = 2
+  }
+
   tags = { Name = "${var.project}-app" }
 }
