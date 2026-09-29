@@ -32,13 +32,7 @@ class ImageService
         }
 
         try {
-            $this->s3Storage->writeStream(
-                $key,
-                $stream,
-                [
-                    'visibility' => 'private',
-                ],
-            );
+            $this->s3Storage->writeStream($key, $stream);
         } finally {
             fclose($stream);
         }
