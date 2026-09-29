@@ -6,7 +6,7 @@ namespace App\Service;
 
 use App\Entity\Author;
 use Doctrine\ORM\EntityManagerInterface;
-use League\Flysystem\FilesystemException;
+use Psr\Log\LoggerInterface;
 use Symfony\Component\HttpFoundation\File\UploadedFile;
 use Symfony\Component\Validator\Validator\ValidatorInterface;
 
@@ -25,6 +25,7 @@ final class AuthorService
         private readonly EntityManagerInterface $entityManager,
         private readonly ValidatorInterface $validator,
         private readonly ImageService $imageService,
+        private readonly LoggerInterface $logger,
     ) {
     }
 
@@ -140,7 +141,7 @@ final class AuthorService
         }
 
         if ($oldPhotoKey !== null && $oldPhotoKey !== $newPhotoKey) {
-            $this->deletePhotoObject($oldPhotoKey);
+            $this->deletePhotoSafely($oldPhotoKey);
         }
 
         return [];
@@ -157,7 +158,7 @@ final class AuthorService
         $this->entityManager->flush();
 
         if ($photoKey !== null && $photoKey !== '') {
-            $this->deletePhotoObject($photoKey);
+            $this->deletePhotoSafely($photoKey);
         }
     }
 
@@ -242,21 +243,17 @@ final class AuthorService
     }
 
     /**
-     * @throws FilesystemException
-     */
-    private function deletePhotoObject(string $key): void
-    {
-        $this->imageService->delete($key);
-    }
-
-    /**
      * Best-effort cleanup used during rollback, so a deletion failure never masks the original exception.
      */
     private function deletePhotoSafely(string $key): void
     {
         try {
-            $this->deletePhotoObject($key);
-        } catch (FilesystemException) {
+            $this->imageService->delete($key);
+        } catch (\Throwable $exception) {
+            $this->logger->warning('Failed to delete author photo from storage.', [
+                'photo_key' => $key,
+                'exception' => $exception,
+            ]);
         }
     }
 }
