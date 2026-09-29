@@ -14,7 +14,7 @@
         <textarea id="bio" name="bio" rows="4">{{ bio|default(author.bio) }}</textarea>
 
         {% if author.photoKey %}
-            <p><img src="{{ asset('uploads/authors/' ~ author.photoKey) }}" alt="{{ author.name }}" style="max-width: 150px; display: block; margin-bottom: 8px;"></p>
+            <p><img src="{{ path('author_photo', {id: author.id}) }}" alt="{{ author.name }}" style="max-width: 150px; display: block; margin-bottom: 8px;"></p>
         {% endif %}
         <label for="photo">{{ author.photoKey ? 'Replace Photo' : 'Photo' }}</label>
         <input type="file" id="photo" name="photo" accept="image/*">

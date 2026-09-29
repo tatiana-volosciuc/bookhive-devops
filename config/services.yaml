@@ -1,6 +1,3 @@
-parameters:
-  authors_photo_directory: '%kernel.project_dir%/public/uploads/authors'
-
 services:
   _defaults:
     autowire: true
@@ -10,4 +7,12 @@ services:
     resource: '../src/'
     exclude:
       - '../src/Kernel.php'
+
+  Aws\S3\S3Client:
+    arguments:
+      - version: 'latest'
+        region: '%env(AWS_REGION)%'
+        credentials:
+          key: '%env(AWS_ACCESS_KEY_ID)%'
+          secret: '%env(AWS_SECRET_ACCESS_KEY)%'
 
