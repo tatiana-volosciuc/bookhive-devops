@@ -109,7 +109,6 @@ class AuthorControllerTest extends WebTestCase
 
         $this->client->followRedirect();
 
-        // ASSUMPTION: template renders flash messages somewhere visible in the body.
         $this->assertStringContainsString('created successfully', $this->client->getResponse()->getContent());
     }
 
