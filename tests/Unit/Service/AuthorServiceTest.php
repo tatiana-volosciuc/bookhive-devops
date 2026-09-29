@@ -362,10 +362,13 @@ class AuthorServiceTest extends TestCase
         $this->logger
             ->expects($this->once())
             ->method('warning')
-            ->with('Failed to delete author photo from storage.', [
-                'photo_key' => 'authors/old-photo.png',
-                'exception' => $this->isInstanceOf(\RuntimeException::class),
-            ]);
+            ->with(
+                'Failed to delete author photo from storage.',
+                $this->callback(static function (array $context): bool {
+                    return $context['photo_key'] === 'authors/old-photo.png'
+                        && $context['exception'] instanceof \RuntimeException;
+                }),
+            );
         $this->entityManager->expects($this->once())->method('flush');
 
         $errors = $this->service->updateFromData($author, [
@@ -423,10 +426,13 @@ class AuthorServiceTest extends TestCase
         $this->logger
             ->expects($this->once())
             ->method('warning')
-            ->with('Failed to delete author photo from storage.', [
-                'photo_key' => 'authors/author-photo.png',
-                'exception' => $this->isInstanceOf(\RuntimeException::class),
-            ]);
+            ->with(
+                'Failed to delete author photo from storage.',
+                $this->callback(static function (array $context): bool {
+                    return $context['photo_key'] === 'authors/author-photo.png'
+                        && $context['exception'] instanceof \RuntimeException;
+                }),
+            );
         $this->entityManager->expects($this->once())->method('remove')->with($author);
         $this->entityManager->expects($this->once())->method('flush');
 
