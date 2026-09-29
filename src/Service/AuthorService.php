@@ -1,25 +1,31 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Service;
 
 use App\Entity\Author;
 use Doctrine\ORM\EntityManagerInterface;
-use Symfony\Component\DependencyInjection\Attribute\Autowire;
-use Symfony\Component\Filesystem\Filesystem;
+use Psr\Log\LoggerInterface;
 use Symfony\Component\HttpFoundation\File\UploadedFile;
 use Symfony\Component\Validator\Validator\ValidatorInterface;
 
-class AuthorService
+final class AuthorService
 {
-    private const ALLOWED_PHOTO_MIME_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+    private const ALLOWED_PHOTO_MIME_TYPES = [
+        'image/jpeg',
+        'image/png',
+        'image/webp',
+        'image/gif',
+    ];
+
     private const MAX_PHOTO_SIZE_BYTES = 5 * 1024 * 1024;
 
     public function __construct(
-        private EntityManagerInterface $entityManager,
-        private ValidatorInterface $validator,
-        private Filesystem $filesystem,
-        #[Autowire('%authors_photo_directory%')]
-        private string $photoDirectory,
+        private readonly EntityManagerInterface $entityManager,
+        private readonly ValidatorInterface $validator,
+        private readonly ImageService $imageService,
+        private readonly LoggerInterface $logger,
     ) {
     }
 
@@ -30,7 +36,11 @@ class AuthorService
     {
         $errors = [];
 
-        if (empty($data['name'])) {
+        if (
+            !isset($data['name'])
+            || !is_string($data['name'])
+            || trim($data['name']) === ''
+        ) {
             $errors[] = 'Name is required.';
         }
 
@@ -38,34 +48,46 @@ class AuthorService
     }
 
     /**
-     * Creates and persists a new Author from submitted data.
+     * @return string[] Validation errors. An empty array means success.
      *
-     * @return string[] Validation error messages; empty array means success.
+     * @throws FilesystemException
      */
-    public function createFromData(array $data, ?UploadedFile $photo = null): array
-    {
+    public function createFromData(
+        array $data,
+        ?UploadedFile $photo = null,
+    ): array {
         $inputErrors = $this->validateInput($data);
-        if (!empty($inputErrors)) {
+        if ($inputErrors !== []) {
             return $inputErrors;
         }
 
         $photoErrors = $this->validatePhoto($photo);
-        if (!empty($photoErrors)) {
+        if ($photoErrors !== []) {
             return $photoErrors;
         }
 
         $author = new Author();
         $this->applyFields($author, $data);
-
         $entityErrors = $this->validateEntity($author);
-        if (!empty($entityErrors)) {
+        if ($entityErrors !== []) {
             return $entityErrors;
         }
 
-        $this->handlePhotoUpload($author, $photo);
+        $newPhotoKey = null;
+        try {
+            if ($photo !== null) {
+                $newPhotoKey = $this->uploadPhoto($photo);
+                $author->setPhotoKey($newPhotoKey);
+            }
 
-        $this->entityManager->persist($author);
-        $this->entityManager->flush();
+            $this->entityManager->persist($author);
+            $this->entityManager->flush();
+        } catch (\Throwable $exception) {
+            if ($newPhotoKey !== null) {
+                $this->deletePhotoSafely($newPhotoKey);
+            }
+            throw $exception;
+        }
 
         return [];
     }
@@ -74,44 +96,80 @@ class AuthorService
      * Updates an existing Author from submitted data.
      *
      * @return string[] Validation error messages; empty array means success.
+     *
+     * @throws FilesystemException
      */
-    public function updateFromData(Author $author, array $data, ?UploadedFile $photo = null): array
-    {
+    public function updateFromData(
+        Author $author,
+        array $data,
+        ?UploadedFile $photo = null,
+    ): array {
         $inputErrors = $this->validateInput($data);
-        if (!empty($inputErrors)) {
+        if ($inputErrors !== []) {
             return $inputErrors;
         }
 
         $photoErrors = $this->validatePhoto($photo);
-        if (!empty($photoErrors)) {
+        if ($photoErrors !== []) {
             return $photoErrors;
         }
 
         $this->applyFields($author, $data);
 
         $entityErrors = $this->validateEntity($author);
-        if (!empty($entityErrors)) {
+        if ($entityErrors !== []) {
             return $entityErrors;
         }
 
-        $this->handlePhotoUpload($author, $photo);
+        if ($photo === null) {
+            $this->entityManager->flush();
 
-        $this->entityManager->flush();
+            return [];
+        }
+
+        $oldPhotoKey = $author->getPhotoKey();
+        $newPhotoKey = $this->uploadPhoto($photo);
+        $author->setPhotoKey($newPhotoKey);
+
+        try {
+            $this->entityManager->flush();
+        } catch (\Throwable $exception) {
+            $author->setPhotoKey($oldPhotoKey);
+            $this->deletePhotoSafely($newPhotoKey);
+
+            throw $exception;
+        }
+
+        if ($oldPhotoKey !== null && $oldPhotoKey !== $newPhotoKey) {
+            $this->deletePhotoSafely($oldPhotoKey);
+        }
 
         return [];
     }
 
+    /**
+     * @throws FilesystemException
+     */
     public function delete(Author $author): void
     {
-        $this->deletePhotoFile($author->getPhotoKey());
+        $photoKey = $author->getPhotoKey();
+
         $this->entityManager->remove($author);
         $this->entityManager->flush();
+
+        if ($photoKey !== null && $photoKey !== '') {
+            $this->deletePhotoSafely($photoKey);
+        }
     }
 
     private function applyFields(Author $author, array $data): void
     {
-        $author->setName($data['name']);
-        $author->setBio($data['bio'] ?: null);
+        $author->setName(trim((string) $data['name']));
+        $bio = isset($data['bio'])
+            ? trim((string) $data['bio'])
+            : '';
+
+        $author->setBio($bio !== '' ? $bio : null);
     }
 
     /**
@@ -127,11 +185,16 @@ class AuthorService
             return ['The uploaded photo could not be read. Please try again.'];
         }
 
-        if ($photo->getSize() > self::MAX_PHOTO_SIZE_BYTES) {
+        $size = $photo->getSize();
+        if ($size === false || $size > self::MAX_PHOTO_SIZE_BYTES) {
             return ['Photo must be smaller than 5 MB.'];
         }
 
-        if (!in_array($photo->getMimeType(), self::ALLOWED_PHOTO_MIME_TYPES, true)) {
+        $mimeType = $photo->getMimeType();
+        if (
+            $mimeType === null
+            || !in_array($mimeType, self::ALLOWED_PHOTO_MIME_TYPES, true)
+        ) {
             return ['Photo must be a JPEG, PNG, WEBP, or GIF image.'];
         }
 
@@ -139,33 +202,26 @@ class AuthorService
     }
 
     /**
-     * Stores the uploaded photo on disk and points the author at it, replacing any previous photo.
+     * Uploads the photo and returns its S3 object key.
+     *
+     * @throws FilesystemException
      */
-    private function handlePhotoUpload(Author $author, ?UploadedFile $photo): void
+    private function uploadPhoto(UploadedFile $photo): string
     {
-        if ($photo === null) {
-            return;
-        }
+        $extension = $photo->guessExtension() ?: 'bin';
 
-        $this->filesystem->mkdir($this->photoDirectory);
+        $photoKey = sprintf(
+            'authors/%s.%s',
+            bin2hex(random_bytes(16)),
+            $extension,
+        );
 
-        $newFilename = bin2hex(random_bytes(16)) . '.' . $photo->guessExtension();
-        $photo->move($this->photoDirectory, $newFilename);
+        $this->imageService->upload(
+            $photoKey,
+            $photo->getPathname(),
+        );
 
-        $this->deletePhotoFile($author->getPhotoKey());
-        $author->setPhotoKey($newFilename);
-    }
-
-    private function deletePhotoFile(?string $photoKey): void
-    {
-        if ($photoKey === null) {
-            return;
-        }
-
-        $path = rtrim($this->photoDirectory, '/') . '/' . $photoKey;
-        if ($this->filesystem->exists($path)) {
-            $this->filesystem->remove($path);
-        }
+        return $photoKey;
     }
 
     /**
@@ -184,5 +240,20 @@ class AuthorService
         }
 
         return $messages;
+    }
+
+    /**
+     * Best-effort cleanup used during rollback, so a deletion failure never masks the original exception.
+     */
+    private function deletePhotoSafely(string $key): void
+    {
+        try {
+            $this->imageService->delete($key);
+        } catch (\Throwable $exception) {
+            $this->logger->warning('Failed to delete author photo from storage.', [
+                'photo_key' => $key,
+                'exception' => $exception,
+            ]);
+        }
     }
 }

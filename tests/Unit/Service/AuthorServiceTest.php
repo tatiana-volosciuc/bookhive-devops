@@ -4,12 +4,13 @@ namespace App\Tests\Unit\Service;
 
 use App\Entity\Author;
 use App\Service\AuthorService;
+use App\Service\ImageService;
 use Doctrine\ORM\EntityManagerInterface;
+use Psr\Log\LoggerInterface;
 use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\MockObject\Stub;
 use PHPUnit\Framework\TestCase;
-use Symfony\Component\Filesystem\Filesystem;
 use Symfony\Component\HttpFoundation\File\UploadedFile;
 use Symfony\Component\Validator\ConstraintViolation;
 use Symfony\Component\Validator\ConstraintViolationList;
@@ -19,16 +20,18 @@ class AuthorServiceTest extends TestCase
 {
     private EntityManagerInterface&MockObject $entityManager;
     private ValidatorInterface&Stub $validator;
-    private Filesystem&MockObject $filesystem;
+    private ImageService&MockObject $imageService;
+    private LoggerInterface&MockObject $logger;
     private AuthorService $service;
 
     protected function setUp(): void
     {
         $this->entityManager = $this->createMock(EntityManagerInterface::class);
         $this->validator = $this->createStub(ValidatorInterface::class);
-        $this->filesystem = $this->createMock(Filesystem::class);
+        $this->imageService = $this->createMock(ImageService::class);
+        $this->logger = $this->createMock(LoggerInterface::class);
 
-        $this->service = new AuthorService($this->entityManager, $this->validator, $this->filesystem, '/tmp/authors_photos');
+        $this->service = new AuthorService($this->entityManager, $this->validator, $this->imageService, $this->logger);
     }
 
     #[AllowMockObjectsWithoutExpectations]
@@ -140,7 +143,7 @@ class AuthorServiceTest extends TestCase
         $this->assertSame(['Photo must be a JPEG, PNG, WEBP, or GIF image.'], $errors);
     }
 
-    public function testCreateFromDataMovesUploadedPhotoAndStoresPhotoKey(): void
+    public function testCreateFromDataUploadsPhotoAndStoresPhotoKey(): void
     {
         $this->validator
             ->method('validate')
@@ -151,9 +154,15 @@ class AuthorServiceTest extends TestCase
         $photo->method('getSize')->willReturn(2048);
         $photo->method('getMimeType')->willReturn('image/png');
         $photo->method('guessExtension')->willReturn('png');
-        $photo->expects($this->once())
-            ->method('move')
-            ->with('/tmp/authors_photos', $this->callback(static fn (string $filename): bool => str_ends_with($filename, '.png')));
+        $photo->method('getPathname')->willReturn('/tmp/uploaded-photo.png');
+
+        $this->imageService
+            ->expects($this->once())
+            ->method('upload')
+            ->with(
+                $this->callback(static fn (string $key): bool => str_starts_with($key, 'authors/') && str_ends_with($key, '.png')),
+                '/tmp/uploaded-photo.png',
+            );
 
         $capturedAuthor = null;
         $this->entityManager
@@ -289,7 +298,7 @@ class AuthorServiceTest extends TestCase
     {
         $author = new Author();
         $author->setName('Original Name');
-        $author->setPhotoKey('old-photo.png');
+        $author->setPhotoKey('authors/old-photo.png');
 
         $this->validator
             ->method('validate')
@@ -300,17 +309,20 @@ class AuthorServiceTest extends TestCase
         $photo->method('getSize')->willReturn(2048);
         $photo->method('getMimeType')->willReturn('image/jpeg');
         $photo->method('guessExtension')->willReturn('jpg');
-        $photo->expects($this->once())
-            ->method('move')
-            ->with('/tmp/authors_photos', $this->callback(static fn (string $filename): bool => str_ends_with($filename, '.jpg')));
+        $photo->method('getPathname')->willReturn('/tmp/uploaded-photo.jpg');
 
-        $this->filesystem->method('exists')->willReturnMap([
-            ['/tmp/authors_photos/old-photo.png', true],
-        ]);
-        $this->filesystem
+        $this->imageService
             ->expects($this->once())
-            ->method('remove')
-            ->with('/tmp/authors_photos/old-photo.png');
+            ->method('upload')
+            ->with(
+                $this->callback(static fn (string $key): bool => str_ends_with($key, '.jpg')),
+                '/tmp/uploaded-photo.jpg',
+            );
+
+        $this->imageService
+            ->expects($this->once())
+            ->method('delete')
+            ->with('authors/old-photo.png');
 
         $this->entityManager->expects($this->once())->method('flush');
 
@@ -320,8 +332,52 @@ class AuthorServiceTest extends TestCase
         ], $photo);
 
         $this->assertSame([], $errors);
-        $this->assertNotSame('old-photo.png', $author->getPhotoKey());
+        $this->assertNotSame('authors/old-photo.png', $author->getPhotoKey());
         $this->assertStringEndsWith('.jpg', $author->getPhotoKey());
+    }
+
+    public function testUpdateFromDataLogsButIgnoresOldPhotoDeletionFailure(): void
+    {
+        $author = new Author();
+        $author->setName('Original Name');
+        $author->setPhotoKey('authors/old-photo.png');
+
+        $this->validator
+            ->method('validate')
+            ->willReturn(new ConstraintViolationList());
+
+        $photo = $this->createMock(UploadedFile::class);
+        $photo->method('isValid')->willReturn(true);
+        $photo->method('getSize')->willReturn(2048);
+        $photo->method('getMimeType')->willReturn('image/jpeg');
+        $photo->method('guessExtension')->willReturn('jpg');
+        $photo->method('getPathname')->willReturn('/tmp/uploaded-photo.jpg');
+
+        $this->imageService->expects($this->once())->method('upload');
+        $this->imageService
+            ->expects($this->once())
+            ->method('delete')
+            ->with('authors/old-photo.png')
+            ->willThrowException(new \RuntimeException('Storage unavailable'));
+        $this->logger
+            ->expects($this->once())
+            ->method('warning')
+            ->with(
+                'Failed to delete author photo from storage.',
+                $this->callback(static function (array $context): bool {
+                    return $context['photo_key'] === 'authors/old-photo.png'
+                        && $context['exception'] instanceof \RuntimeException;
+                }),
+            );
+        $this->entityManager->expects($this->once())->method('flush');
+
+        $errors = $this->service->updateFromData($author, [
+            'name' => 'Updated Name',
+            'bio' => 'Updated bio.',
+        ], $photo);
+
+        $this->assertSame([], $errors);
+        $this->assertNotSame('authors/old-photo.png', $author->getPhotoKey());
     }
 
     public function testDeleteRemovesAndFlushesAuthor(): void
@@ -343,16 +399,40 @@ class AuthorServiceTest extends TestCase
     {
         $author = new Author();
         $author->setName('To Be Deleted');
-        $author->setPhotoKey('author-photo.png');
+        $author->setPhotoKey('authors/author-photo.png');
 
-        $this->filesystem->method('exists')->willReturnMap([
-            ['/tmp/authors_photos/author-photo.png', true],
-        ]);
-        $this->filesystem
+        $this->imageService
             ->expects($this->once())
-            ->method('remove')
-            ->with('/tmp/authors_photos/author-photo.png');
+            ->method('delete')
+            ->with('authors/author-photo.png');
 
+        $this->entityManager->expects($this->once())->method('remove')->with($author);
+        $this->entityManager->expects($this->once())->method('flush');
+
+        $this->service->delete($author);
+    }
+
+    public function testDeleteLogsButIgnoresPhotoDeletionFailure(): void
+    {
+        $author = new Author();
+        $author->setName('To Be Deleted');
+        $author->setPhotoKey('authors/author-photo.png');
+
+        $this->imageService
+            ->expects($this->once())
+            ->method('delete')
+            ->with('authors/author-photo.png')
+            ->willThrowException(new \RuntimeException('Storage unavailable'));
+        $this->logger
+            ->expects($this->once())
+            ->method('warning')
+            ->with(
+                'Failed to delete author photo from storage.',
+                $this->callback(static function (array $context): bool {
+                    return $context['photo_key'] === 'authors/author-photo.png'
+                        && $context['exception'] instanceof \RuntimeException;
+                }),
+            );
         $this->entityManager->expects($this->once())->method('remove')->with($author);
         $this->entityManager->expects($this->once())->method('flush');
 

@@ -8,6 +8,17 @@ data "aws_iam_policy_document" "ec2_assume" {
   }
 }
 
+data "aws_iam_policy_document" "app_s3" {
+  statement {
+    actions   = ["s3:PutObject", "s3:GetObject", "s3:DeleteObject"]
+    resources = ["${aws_s3_bucket.main.arn}/authors/*"]
+  }
+  statement {
+    actions   = ["s3:ListBucket"]
+    resources = [aws_s3_bucket.main.arn]
+  }
+}
+
 resource "aws_iam_role" "app_instance" {
   name               = "${var.project}-app-instance-role"
   assume_role_policy = data.aws_iam_policy_document.ec2_assume.json
@@ -34,4 +45,14 @@ resource "aws_iam_role_policy" "app_secrets" {
 resource "aws_iam_instance_profile" "app_instance" {
   name = "${var.project}-app-instance-profile"
   role = aws_iam_role.app_instance.name
+}
+
+resource "aws_iam_policy" "app_s3" {
+  name   = "${var.project}-app-s3"
+  policy = data.aws_iam_policy_document.app_s3.json
+}
+
+resource "aws_iam_role_policy_attachment" "app_s3" {
+  role       = aws_iam_role.app_instance.name
+  policy_arn = aws_iam_policy.app_s3.arn
 }

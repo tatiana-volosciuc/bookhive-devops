@@ -31,6 +31,6 @@ resource "aws_vpc_security_group_ingress_rule" "app_to_db" {
 
 resource "aws_vpc_security_group_egress_rule" "db_egress" {
   security_group_id = aws_security_group.db.id
-  ip_protocol        = "-1"
-  cidr_ipv4          = "0.0.0.0/0"
+  ip_protocol       = "-1"
+  cidr_ipv4         = "0.0.0.0/0"
 }

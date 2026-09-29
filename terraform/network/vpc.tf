@@ -6,7 +6,7 @@ resource "aws_vpc" "main" {
   cidr_block           = var.vpc_cidr
   enable_dns_support   = true
   enable_dns_hostnames = true
-  tags = { Name = "${var.project}-vpc" }
+  tags                 = { Name = "${var.project}-vpc" }
 }
 
 resource "aws_internet_gateway" "main" {
@@ -19,7 +19,7 @@ resource "aws_subnet" "public" {
   cidr_block              = var.public_subnet_cidr
   availability_zone       = data.aws_availability_zones.available.names[0]
   map_public_ip_on_launch = true
-  tags = { Name = "${var.project}-public" }
+  tags                    = { Name = "${var.project}-public" }
 }
 
 resource "aws_subnet" "private_a" {
@@ -27,14 +27,14 @@ resource "aws_subnet" "private_a" {
   cidr_block              = var.private_subnet_cidr_a
   availability_zone       = data.aws_availability_zones.available.names[0]
   map_public_ip_on_launch = false
-  tags = { Name = "${var.project}-private-a" }
+  tags                    = { Name = "${var.project}-private-a" }
 }
 
 resource "aws_subnet" "private_b" {
   vpc_id            = aws_vpc.main.id
   cidr_block        = var.private_subnet_cidr_b
   availability_zone = data.aws_availability_zones.available.names[1]
-  tags = { Name = "${var.project}-private-b" }
+  tags              = { Name = "${var.project}-private-b" }
 }
 
 resource "aws_eip" "nat" {
@@ -95,32 +95,24 @@ data "aws_db_snapshot" "latest" {
 }
 
 resource "aws_db_instance" "main" {
-  identifier              = "${var.project}-db"
-  engine                  = "mysql"
-  engine_version          = "8.0"
-  instance_class          = var.db_instance_class
-  allocated_storage       = 20
-  db_name                 = "bookhive"
-  username                = "admin"
+  identifier                  = "${var.project}-db"
+  engine                      = "mysql"
+  engine_version              = "8.0"
+  instance_class              = var.db_instance_class
+  allocated_storage           = 20
+  db_name                     = "bookhive"
+  username                    = "admin"
   manage_master_user_password = true
 
-  db_subnet_group_name    = aws_db_subnet_group.db.name
-  vpc_security_group_ids  = [aws_security_group.db.id]
-  publicly_accessible     = false
+  db_subnet_group_name   = aws_db_subnet_group.db.name
+  vpc_security_group_ids = [aws_security_group.db.id]
+  publicly_accessible    = false
 
-  storage_encrypted       = true
-#   kms_key_id              = var.kms_key_arn
+  storage_encrypted = true
+  #   kms_key_id              = var.kms_key_arn
 
-  snapshot_identifier     = data.aws_db_snapshot.latest.id  # Always restores from whichever snapshot of this instance is newest
+  snapshot_identifier = data.aws_db_snapshot.latest.id # Always restores from whichever snapshot of this instance is newest
 
-  skip_final_snapshot     = var.env == "prod" ? false : true
+  skip_final_snapshot       = var.env == "prod" ? false : true
   final_snapshot_identifier = var.env == "prod" ? "${var.project}-db-final-${formatdate("YYYYMMDD-hhmm", timestamp())}" : null
-}
-
-output "db_endpoint" {
-  value = aws_db_instance.main.endpoint
-}
-
-output "db_secret_arn" {
-    value = aws_db_instance.main.master_user_secret[0].secret_arn
 }
