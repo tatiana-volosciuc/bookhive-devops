@@ -107,7 +107,9 @@ jobs:
         run: php bin/console doctrine:migrations:diff --check-database-platform --no-interaction || true
 
   build-and-verify:
-    needs: test
+    needs:
+      - test
+      - test-migrations
     runs-on: ubuntu-latest
 
     steps:

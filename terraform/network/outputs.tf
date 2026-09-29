@@ -25,3 +25,11 @@ output "db_endpoint" {
 output "db_secret_arn" {
   value = aws_db_instance.main.master_user_secret[0].secret_arn
 }
+
+output "ecr_repository_url" {
+  value = aws_ecr_repository.app.repository_url
+}
+
+output "ecr_repository_name" {
+  value = aws_ecr_repository.app.name
+}
