@@ -19,6 +19,19 @@ data "aws_iam_policy_document" "app_s3" {
   }
 }
 
+data "aws_iam_policy_document" "app_ecr" {
+  statement {
+    effect = "Allow"
+    actions = [
+      "ecr:GetAuthorizationToken",
+      "ecr:BatchCheckLayerAvailability",
+      "ecr:BatchGetImage",
+      "ecr:GetDownloadUrlForLayer"
+    ]
+    resources = ["*"]
+  }
+}
+
 resource "aws_iam_role" "app_instance" {
   name               = "${var.project}-app-instance-role"
   assume_role_policy = data.aws_iam_policy_document.ec2_assume.json
@@ -55,4 +68,14 @@ resource "aws_iam_policy" "app_s3" {
 resource "aws_iam_role_policy_attachment" "app_s3" {
   role       = aws_iam_role.app_instance.name
   policy_arn = aws_iam_policy.app_s3.arn
+}
+
+resource "aws_iam_policy" "app_ecr" {
+  name   = "${var.project}-app-ecr"
+  policy = data.aws_iam_policy_document.app_ecr.json
+}
+
+resource "aws_iam_role_policy_attachment" "app_ecr" {
+  role       = aws_iam_role.app_instance.name
+  policy_arn = aws_iam_policy.app_ecr.arn
 }
