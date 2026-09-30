@@ -1,7 +1,3 @@
-output "instance_id" {
-  value = aws_instance.app.id
-}
-
 output "private_subnet_a_id" {
   value = aws_subnet.private_a.id
 }
@@ -33,3 +29,17 @@ output "ecr_repository_url" {
 output "ecr_repository_name" {
   value = aws_ecr_repository.app.name
 }
+
+# --- Fargate ---
+output "ecs_cluster_name" {
+  value = aws_ecs_cluster.main.name
+}
+
+output "ecs_service_name" {
+  value = aws_ecs_service.app.name
+}
+
+# EC2 disabled
+# output "instance_id" {
+#   value = aws_instance.app.id
+# }

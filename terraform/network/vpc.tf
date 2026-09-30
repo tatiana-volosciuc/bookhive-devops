@@ -14,12 +14,20 @@ resource "aws_internet_gateway" "main" {
   tags   = { Name = "${var.project}-igw" }
 }
 
-resource "aws_subnet" "public" {
+resource "aws_subnet" "public_a" {
   vpc_id                  = aws_vpc.main.id
-  cidr_block              = var.public_subnet_cidr
+  cidr_block              = var.public_subnet_cidr_a
   availability_zone       = data.aws_availability_zones.available.names[0]
   map_public_ip_on_launch = true
-  tags                    = { Name = "${var.project}-public" }
+  tags                    = { Name = "${var.project}-public-a" }
+}
+
+resource "aws_subnet" "public_b" {
+  vpc_id                  = aws_vpc.main.id
+  cidr_block              = var.public_subnet_cidr_b
+  availability_zone       = data.aws_availability_zones.available.names[1]
+  map_public_ip_on_launch = true
+  tags                    = { Name = "${var.project}-public-b" }
 }
 
 resource "aws_subnet" "private_a" {
@@ -44,7 +52,7 @@ resource "aws_eip" "nat" {
 
 resource "aws_nat_gateway" "main" {
   allocation_id = aws_eip.nat.id
-  subnet_id     = aws_subnet.public.id
+  subnet_id     = aws_subnet.public_a.id
   tags          = { Name = "${var.project}-nat" }
   depends_on    = [aws_internet_gateway.main]
 }
@@ -67,8 +75,13 @@ resource "aws_route_table" "private" {
   tags = { Name = "${var.project}-private-rt" }
 }
 
-resource "aws_route_table_association" "public" {
-  subnet_id      = aws_subnet.public.id
+resource "aws_route_table_association" "public_a" {
+  subnet_id      = aws_subnet.public_a.id
+  route_table_id = aws_route_table.public.id
+}
+
+resource "aws_route_table_association" "public_b" {
+  subnet_id      = aws_subnet.public_b.id
   route_table_id = aws_route_table.public.id
 }
 
