@@ -45,3 +45,26 @@ jobs:
             ${{ vars.ECR_REPOSITORY }}:${{ github.event.workflow_run.head_sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+#      - name: Download current task definition
+#        run: |
+#          aws ecs describe-task-definition \
+#          --task-definition bookhive-app \
+#          --query taskDefinition \
+#          > task-definition.json
+#
+#      - name: Fill in new image ID
+#        id: task-def
+#        uses: aws-actions/amazon-ecs-render-task-definition@v1
+#        with:
+#          task-definition: task-definition.json
+#          container-name: bookhive
+#          image: ${{ vars.ECR_REPOSITORY }}:${{ github.event.workflow_run.head_sha }}
+#
+#      - name: Deploy ECS task definition
+#        uses: aws-actions/amazon-ecs-deploy-task-definition@v2
+#        with:
+#          task-definition: ${{ steps.task-def.outputs.task-definition }}
+#          service: bookhive-service
+#          cluster: bookhive-cluster
+#          wait-for-service-stability: true
