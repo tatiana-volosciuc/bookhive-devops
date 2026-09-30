@@ -58,4 +58,5 @@ variable "env" {
 variable "image_tag" {
   description = "Image tag to deploy"
   type        = string
+  default     = "bootstrap"
 }
