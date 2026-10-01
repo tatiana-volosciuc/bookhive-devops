@@ -12,4 +12,6 @@
 /.phpunit.cache/
 ###< phpunit/phpunit ###
 
+### private keys ###
 *.pem
+terraform.tfvars
