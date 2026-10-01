@@ -64,20 +64,20 @@ resource "aws_ecs_service" "app" {
   # In the real project it's going to be desired_count = 1
   # and do not destroy/apply the whole infrastructure all the time.
   # terraform apply -> github actions -> build image -> push image -> register task definition -> update ECS
-  desired_count = 0
+  desired_count = 2
 
   launch_type = "FARGATE"
 
   network_configuration {
     subnets = [
-      aws_subnet.public_a.id,
-      aws_subnet.public_b.id
+      aws_subnet.private_a.id,
+      aws_subnet.private_b.id
     ]
 
     security_groups = [
       aws_security_group.ecs.id
     ]
 
-    assign_public_ip = true
+    assign_public_ip = false
   }
 }
