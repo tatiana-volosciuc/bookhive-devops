@@ -2,7 +2,7 @@ resource "aws_ecs_cluster" "main" {
   name = "${var.project}-cluster"
 }
 
-# Rules live in alb.tf as standalone resources (ingress from ALB SG only).
+# Rules live in security_groups.tf / alb.tf as standalone resources.
 resource "aws_security_group" "ecs" {
   name        = "${var.project}-ecs"
   description = "ECS service"
@@ -15,6 +15,9 @@ resource "aws_cloudwatch_log_group" "app" {
   retention_in_days = 7
 }
 
+# ---------------------------------------------------------------------------
+# Task: php-fpm container + nginx sidecar sharing one network namespace
+# ---------------------------------------------------------------------------
 resource "aws_ecs_task_definition" "app" {
   family = "${var.project}-app"
 
@@ -29,37 +32,52 @@ resource "aws_ecs_task_definition" "app" {
 
   container_definitions = jsonencode([
     {
+      # PHP app. No port exposed to the ALB: nginx reaches it on 127.0.0.1:9000.
+      # CD replaces this image; the name must match container-name in cd.yml.
       name      = var.project
       image     = "${aws_ecr_repository.app.repository_url}:${var.image_tag}"
       essential = true
 
-      # Time between SIGTERM and SIGKILL. Must be >= deregistration_delay,
-      # and your app must finish in-flight requests on SIGTERM.
+      # Time between stop signal and SIGKILL. Must be >= deregistration_delay.
       stopTimeout = 60
 
-      logConfiguration = {
-        logDriver = "awslogs"
-        options = {
-          awslogs-group         = aws_cloudwatch_log_group.app.name
-          awslogs-region        = var.aws_region
-          awslogs-stream-prefix = "app"
-        }
-      }
-
       environment = [
+        { name = "APP_ENV", value = "prod" },
         { name = "DB_HOST", value = aws_db_instance.main.address },
-        { name = "DB_PORT", value = "3306" },
         { name = "DB_NAME", value = "bookhive" },
         { name = "DB_USER", value = "admin" },
-        { name = "S3_BUCKET", value = aws_s3_bucket.main.bucket }
+        { name = "AWS_REGION", value = var.aws_region },
+        { name = "AWS_S3_BUCKET", value = aws_s3_bucket.main.bucket }
       ]
 
       secrets = [
         {
           name      = "DB_PASSWORD"
           valueFrom = "${aws_db_instance.main.master_user_secret[0].secret_arn}:password::"
+        },
+        {
+          name      = "APP_SECRET"
+          valueFrom = aws_secretsmanager_secret.app_secret.arn
         }
       ]
+
+      logConfiguration = {
+        logDriver = "awslogs"
+        options = {
+          awslogs-group         = aws_cloudwatch_log_group.app.name
+          awslogs-region        = var.aws_region
+          awslogs-stream-prefix = "php"
+        }
+      }
+    },
+    {
+      # Receives traffic from the ALB on port 80 and forwards it to php-fpm.
+      # CD replaces this image too; the name must match container_name in the service.
+      name      = "nginx"
+      image     = "${aws_ecr_repository.nginx.repository_url}:${var.image_tag}"
+      essential = true
+
+      stopTimeout = 60
 
       portMappings = [
         {
@@ -68,6 +86,15 @@ resource "aws_ecs_task_definition" "app" {
           protocol      = "tcp"
         }
       ]
+
+      logConfiguration = {
+        logDriver = "awslogs"
+        options = {
+          awslogs-group         = aws_cloudwatch_log_group.app.name
+          awslogs-region        = var.aws_region
+          awslogs-stream-prefix = "nginx"
+        }
+      }
     }
   ])
 }
@@ -77,8 +104,8 @@ resource "aws_ecs_service" "app" {
   cluster         = aws_ecs_cluster.main.id
   task_definition = aws_ecs_task_definition.app.arn
 
-  # Learning environment only: 0 means the ALB has no targets and returns 503.
-  # Set to 1+ (or set it from CD) to actually serve traffic.
+  # Learning environment: start at 0, CD pushes the image, then raise it
+  # with: aws ecs update-service --desired-count 1
   desired_count = 0
 
   launch_type = "FARGATE"
@@ -94,15 +121,15 @@ resource "aws_ecs_service" "app" {
 
   load_balancer {
     target_group_arn = aws_lb_target_group.app.arn
-    container_name   = var.project
+    container_name   = "nginx" # the ALB talks to nginx, not to php-fpm
     container_port   = local.container_port
   }
 
-  # Don't count slow-starting containers as unhealthy
-  health_check_grace_period_seconds = 60
+  # Migrations run in the php entrypoint before php-fpm starts,
+  # so give the first health checks time.
+  health_check_grace_period_seconds = 120
 
-  # Zero-downtime rolling deploy: start new tasks first, keep all old ones
-  # serving until the new ones are healthy, then drain the old ones.
+  # Zero-downtime rolling deploy: new tasks first, old ones drain afterwards.
   deployment_minimum_healthy_percent = 100
   deployment_maximum_percent         = 200
 
@@ -111,10 +138,10 @@ resource "aws_ecs_service" "app" {
     rollback = true
   }
 
+  # CD owns the task definition revision and you own the task count
   lifecycle {
     ignore_changes = [task_definition, desired_count]
   }
 
-  # Listener must exist before the service can register targets
   depends_on = [aws_lb_listener.https]
 }
