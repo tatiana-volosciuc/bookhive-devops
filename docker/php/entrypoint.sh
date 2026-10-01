@@ -25,6 +25,16 @@ PHP
 fi
 
 echo "Waiting for database and running migrations..."
+
+# ECS: the task gets DB_HOST/DB_USER/DB_NAME as plain env vars and DB_PASSWORD
+# from Secrets Manager, but Doctrine reads DATABASE_URL. Build it here.
+# The password is URL-encoded because RDS passwords can contain special characters.
+# Locally (docker-compose) DATABASE_URL is provided by compose and left alone.
+if [ -z "$LOCAL_SETUP" ] && [ -n "$DB_HOST" ]; then
+  DB_PASSWORD_ENCODED=$(php -r 'echo rawurlencode((string) getenv("DB_PASSWORD"));')
+  export DATABASE_URL="mysql://${DB_USER}:${DB_PASSWORD_ENCODED}@${DB_HOST}:3306/${DB_NAME}?serverVersion=8.0&charset=utf8mb4"
+fi
+
 php bin/console doctrine:database:create --if-not-exists --no-interaction
 php bin/console doctrine:migrations:migrate --no-interaction
 
