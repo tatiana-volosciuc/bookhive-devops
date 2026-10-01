@@ -52,9 +52,9 @@ jobs:
           context: ./docker/nginx
           push: true
           tags: |
-           ${{ vars.ECR_NGINX_REPOSITORY }}:${{ github.event.workflow_run.head_sha }}
-           cache-from: type=gha,scope=nginx
-           cache-to: type=gha,mode=max,scope=nginx
+               ${{ vars.ECR_NGINX_REPOSITORY }}:${{ github.event.workflow_run.head_sha }}
+          cache-from: type=gha,scope=nginx
+          cache-to: type=gha,mode=max,scope=nginx
 
       - name: Download current task definition
         run: |
