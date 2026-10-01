@@ -10,6 +10,11 @@ resource "aws_security_group" "ecs" {
   tags        = { Name = "${var.project}-ecs-sg" }
 }
 
+resource "aws_cloudwatch_log_group" "app" {
+  name              = "/ecs/${var.project}"
+  retention_in_days = 7
+}
+
 resource "aws_ecs_task_definition" "app" {
   family = "${var.project}-app"
 
@@ -31,6 +36,30 @@ resource "aws_ecs_task_definition" "app" {
       # Time between SIGTERM and SIGKILL. Must be >= deregistration_delay,
       # and your app must finish in-flight requests on SIGTERM.
       stopTimeout = 60
+
+      logConfiguration = {
+        logDriver = "awslogs"
+        options = {
+          awslogs-group         = aws_cloudwatch_log_group.app.name
+          awslogs-region        = var.aws_region
+          awslogs-stream-prefix = "app"
+        }
+      }
+
+      environment = [
+        { name = "DB_HOST", value = aws_db_instance.main.address },
+        { name = "DB_PORT", value = "3306" },
+        { name = "DB_NAME", value = "bookhive" },
+        { name = "DB_USER", value = "admin" },
+        { name = "S3_BUCKET", value = aws_s3_bucket.main.bucket }
+      ]
+
+      secrets = [
+        {
+          name      = "DB_PASSWORD"
+          valueFrom = "${aws_db_instance.main.master_user_secret[0].secret_arn}:password::"
+        }
+      ]
 
       portMappings = [
         {
@@ -80,6 +109,10 @@ resource "aws_ecs_service" "app" {
   deployment_circuit_breaker {
     enable   = true
     rollback = true
+  }
+
+  lifecycle {
+    ignore_changes = [task_definition, desired_count]
   }
 
   # Listener must exist before the service can register targets
