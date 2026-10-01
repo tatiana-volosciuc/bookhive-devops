@@ -51,6 +51,16 @@ resource "aws_ecs_task_definition" "app" {
           protocol      = "tcp"
         }
       ]
+
+      logConfiguration = {
+        logDriver = "awslogs"
+
+        options = {
+          awslogs-group         = aws_cloudwatch_log_group.ecs.name
+          awslogs-region        = var.aws_region
+          awslogs-stream-prefix = "ecs"
+        }
+      }
     }
   ])
 }
@@ -80,4 +90,10 @@ resource "aws_ecs_service" "app" {
 
     assign_public_ip = false
   }
+}
+
+# Cloudwatch
+resource "aws_cloudwatch_log_group" "ecs" {
+  name              = "/ecs/${var.project}"
+  retention_in_days = 7
 }
