@@ -100,9 +100,10 @@ resource "aws_ecs_task_definition" "app" {
 }
 
 resource "aws_ecs_service" "app" {
-  name            = "${var.project}-service"
-  cluster         = aws_ecs_cluster.main.id
-  task_definition = aws_ecs_task_definition.app.arn
+  name                   = "${var.project}-service"
+  cluster                = aws_ecs_cluster.main.id
+  task_definition        = aws_ecs_task_definition.app.arn
+  enable_execute_command = true
 
   # Learning environment: start at 0, CD pushes the image, then raise it
   # with: aws ecs update-service --desired-count 1
