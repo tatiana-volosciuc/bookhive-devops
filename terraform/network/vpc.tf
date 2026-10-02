@@ -128,4 +128,7 @@ resource "aws_db_instance" "main" {
 
   skip_final_snapshot       = var.env == "prod" ? false : true
   final_snapshot_identifier = var.env == "prod" ? "${var.project}-db-final-${formatdate("YYYYMMDD-hhmm", timestamp())}" : null
+
+  enabled_cloudwatch_logs_exports = local.rds_log_types
+  depends_on                      = [aws_cloudwatch_log_group.rds]
 }
