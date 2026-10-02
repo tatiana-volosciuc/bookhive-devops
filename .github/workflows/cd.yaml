@@ -36,15 +36,25 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Build and push image
+      - name: Build and push PHP image
         uses: docker/build-push-action@v6
         with:
           context: .
           push: true
           tags: |
             ${{ vars.ECR_REPOSITORY }}:${{ github.event.workflow_run.head_sha }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-from: type=gha,scope=php
+          cache-to: type=gha,mode=max,scope=php
+
+      - name: Build and push nginx image
+        uses: docker/build-push-action@v6
+        with:
+          context: ./docker/nginx
+          push: true
+          tags: |
+               ${{ vars.ECR_NGINX_REPOSITORY }}:${{ github.event.workflow_run.head_sha }}
+          cache-from: type=gha,scope=nginx
+          cache-to: type=gha,mode=max,scope=nginx
 
       - name: Download current task definition
         run: |
@@ -53,18 +63,26 @@ jobs:
           --query taskDefinition \
           > task-definition.json
 
-      - name: Fill in new image ID
-        id: task-def
+      - name: Fill in new PHP image ID
+        id: task-def-php
         uses: aws-actions/amazon-ecs-render-task-definition@v1
         with:
           task-definition: task-definition.json
           container-name: bookhive
           image: ${{ vars.ECR_REPOSITORY }}:${{ github.event.workflow_run.head_sha }}
 
+      - name: Fill in new nginx image ID
+        id: task-def-nginx
+        uses: aws-actions/amazon-ecs-render-task-definition@v1
+        with:
+          task-definition: ${{ steps.task-def-php.outputs.task-definition }}
+          container-name: nginx
+          image: ${{ vars.ECR_NGINX_REPOSITORY }}:${{ github.event.workflow_run.head_sha }}
+
       - name: Deploy ECS task definition
         uses: aws-actions/amazon-ecs-deploy-task-definition@v2
         with:
-          task-definition: ${{ steps.task-def.outputs.task-definition }}
+          task-definition: ${{ steps.task-def-nginx.outputs.task-definition }}
           service: bookhive-service
           cluster: bookhive-cluster
           wait-for-service-stability: true
