@@ -79,3 +79,8 @@ variable "health_check_path" {
   type        = string
   default     = "/"
 }
+
+variable "alert_email" {
+  description = "Email that receives CloudWatch alarm notifications"
+  type        = string
+}
