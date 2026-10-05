@@ -1,10 +1,12 @@
 #!/bin/sh
 set -e
 
-# Local docker-compose only: DB_PASSWORD is passed by compose
-# and is NOT set in ECS, so these blocks are skipped there.
+# Local docker-compose vs ECS detection.
+# ECS Fargate injects ECS_CONTAINER_METADATA_URI_V4 into every container;
+# docker-compose never sets it. (DB_PASSWORD can't be used for this check:
+# ECS injects it too, via `secrets`.)
 LOCAL_SETUP=""
-if [ -n "$DB_PASSWORD" ]; then
+if [ -z "$ECS_CONTAINER_METADATA_URI_V4" ]; then
   LOCAL_SETUP=1
 fi
 

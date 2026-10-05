@@ -73,6 +73,22 @@ resource "aws_iam_role_policy_attachment" "task_s3" {
   policy_arn = aws_iam_policy.app_s3.arn
 }
 
+data "aws_iam_policy_document" "exec_secrets" {
+  statement {
+    actions = ["secretsmanager:GetSecretValue"]
+    resources = [
+      aws_db_instance.main.master_user_secret[0].secret_arn,
+      aws_secretsmanager_secret.app_secret.arn,
+    ]
+  }
+}
+
+resource "aws_iam_role_policy" "exec_secrets" {
+  name   = "${var.project}-exec-secrets"
+  role   = aws_iam_role.ecs_execution_role.id
+  policy = data.aws_iam_policy_document.exec_secrets.json
+}
+
 # Currently disabled because of Fargate usage and remains as an example
 # data "aws_iam_policy_document" "ec2_assume" {
 #   statement {
