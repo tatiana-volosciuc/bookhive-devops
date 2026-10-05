@@ -1,10 +1,10 @@
 #!/bin/sh
 set -e
 
-# Local docker-compose only: DB_ROOT_PASSWORD is passed by compose
+# Local docker-compose only: DB_PASSWORD is passed by compose
 # and is NOT set in ECS, so these blocks are skipped there.
 LOCAL_SETUP=""
-if [ -n "$DB_ROOT_PASSWORD" ]; then
+if [ -n "$DB_PASSWORD" ]; then
   LOCAL_SETUP=1
 fi
 
@@ -15,7 +15,7 @@ if [ -n "$LOCAL_SETUP" ]; then
 $dbHost = getenv('DB_HOST') ?: 'mysql';
 $dbName = getenv('DB_NAME');
 $dbUser = getenv('DB_USER');
-$rootPassword = getenv('DB_ROOT_PASSWORD');
+$rootPassword = getenv('DB_PASSWORD');
 
 $pdo = new PDO(sprintf('mysql:host=%s;port=3306', $dbHost), 'root', $rootPassword);
 $pdo->exec(sprintf('CREATE DATABASE IF NOT EXISTS `%s_test`', $dbName));

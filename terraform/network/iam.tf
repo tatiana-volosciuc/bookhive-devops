@@ -45,6 +45,24 @@ resource "aws_iam_role" "ecs_task_role" {
   })
 }
 
+data "aws_iam_policy_document" "ecs_exec" {
+  statement {
+    actions = [
+      "ssmmessages:CreateControlChannel",
+      "ssmmessages:CreateDataChannel",
+      "ssmmessages:OpenControlChannel",
+      "ssmmessages:OpenDataChannel",
+    ]
+    resources = ["*"]
+  }
+}
+
+resource "aws_iam_role_policy" "task_ecs_exec" {
+  name   = "${var.project}-ecs-exec"
+  role   = aws_iam_role.ecs_task_role.id
+  policy = data.aws_iam_policy_document.ecs_exec.json
+}
+
 resource "aws_iam_policy" "app_s3" {
   name   = "${var.project}-app-s3"
   policy = data.aws_iam_policy_document.app_s3.json
