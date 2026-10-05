@@ -8,8 +8,8 @@ on:
     branches: [main]
 
 permissions:
+  id-token: write # lets the job request an OIDC token
   contents: read
-  packages: write
 
 jobs:
   build-and-push:
@@ -25,8 +25,7 @@ jobs:
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
           aws-region: ${{ secrets.AWS_REGION }}
 
       - name: Login to Amazon ECR
