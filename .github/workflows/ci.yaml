@@ -103,8 +103,14 @@ jobs:
       - name: Run migrations
         run: php bin/console doctrine:migrations:migrate --no-interaction
 
-      - name: Check for missing migrations (schema drift)
-        run: php bin/console doctrine:migrations:diff --check-database-platform --no-interaction || true
+      - name: Schema matches entities (fails on drift)
+        run: php bin/console doctrine:schema:validate
+
+      - name: Migrations are reversible (down)
+        run: php bin/console doctrine:migrations:migrate prev --no-interaction
+
+      - name: Re-apply migration (up again)
+        run: php bin/console doctrine:migrations:migrate --no-interaction
 
   build-and-verify:
     needs:
