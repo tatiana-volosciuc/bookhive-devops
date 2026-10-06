@@ -2,6 +2,8 @@
 
 A Symfony-based bookshop catalog application, built primarily as a **DevOps learning and planning project**.
 
+> **Estimated AWS cost: ~$64/month fixed floor** (NAT Gateway ~$33, ALB ~$17, RDS single-AZ ~$15), running 24/7 regardless of traffic — plus a few dollars for compute/storage/logs when the ECS service is actually scaled up. See [docs/cost-and-wa-review-prep.md](docs/cost-and-wa-review-prep.md) for the full breakdown and cost-cutting options.
+
 ## Stack
 
 - **PHP** 8.4
@@ -72,15 +74,19 @@ The project runs as three containers: `php` (PHP-FPM + app code), `nginx` (web s
    ```
    (or whichever host port is configured for `nginx` in `docker-compose.yml`)
 
+### Teardown
+
+```bash
+# Stop and remove containers + network, keep the database volume
+docker compose down
+
+# Also wipe the database volume (full reset — next `up` starts from an empty DB)
+docker compose down -v
+```
+
 ### Common commands
 
 ```bash
-# Stop the stack
-docker compose down
-
-# Stop the stack and wipe the database volume (fresh start)
-docker compose down -v
-
 # Rebuild after Dockerfile or dependency changes
 docker compose up -d --build
 
@@ -122,7 +128,7 @@ Two GitHub Actions workflows ([.github/workflows/ci.yaml](.github/workflows/ci.y
 
 ## Infrastructure (AWS)
 
-Provisioned via Terraform in [terraform/network](terraform/network). Current target architecture:
+Provisioned via Terraform in [terraform/network](terraform/network). See [docs/architecture.md](docs/architecture.md) for a diagram kept in sync with what's actually deployed. Current target architecture:
 
 - **Networking** — a VPC across 2 Availability Zones with public subnets (ALB, NAT Gateway) and private subnets (ECS tasks, RDS). A single NAT Gateway provides outbound internet access for the private subnets; an S3 gateway VPC endpoint avoids routing S3 traffic through it.
 - **Compute** — ECS Fargate only (no EC2 to patch/manage). Each task runs two containers in one network namespace: the PHP-FPM app and an Nginx sidecar that receives ALB traffic on port 80 and forwards it to `127.0.0.1:9000`. Service starts at `desired_count = 0` and is scaled up manually/by CD after the first image is pushed.
@@ -137,6 +143,20 @@ Provisioned via Terraform in [terraform/network](terraform/network). Current tar
 
 An EC2 + SSM-based deployment path (`terraform/network/ec2.tf`) was prototyped first and is kept commented out as a reference — the project now runs on Fargate exclusively.
 
+## Infrastructure teardown (AWS)
+
+This is a cost-sensitive learning environment — leaving it running is the single biggest way to waste money, so teardown gets the same attention as setup:
+
+```bash
+cd terraform/network
+terraform destroy
+```
+
+- Everything is destroyable in one pass: RDS, S3, and ECR all have `force_destroy`/`force_delete` set outside `prod`, so `destroy` never gets stuck waiting for manual emptying.
+- **This is destructive by design.** RDS is fully ephemeral (`skip_final_snapshot = true` outside `prod`) — `destroy` discards all data with no recovery path. That's intentional for an environment rebuilt often, not an oversight.
+- No manual scale-down step is needed first — the ECS service already runs at `desired_count = 0` between sessions, and Terraform tears down the service/cluster regardless of task count.
+- After `destroy`, double-check the three big recurring costs are actually gone — NAT Gateway, ALB, and RDS (see [cost breakdown](docs/cost-and-wa-review-prep.md)) — in case the run was interrupted partway through.
+
 ## Where this is headed
 
 Remaining open items (see [docs/network-plan.md](docs/network-plan.md)):
@@ -146,3 +166,4 @@ Remaining open items (see [docs/network-plan.md](docs/network-plan.md)):
 - Move session storage off native PHP sessions before running more than one app task at a time
 
 This README will be updated as those pieces land.
+
