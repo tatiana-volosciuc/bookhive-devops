@@ -16,19 +16,20 @@ final class Version20260828114639 extends AbstractMigration
 
     public function up(Schema $schema): void
     {
-        $this->addSql('CREATE TABLE book (
-    id INT AUTO_INCREMENT NOT NULL, 
-    title VARCHAR(255) NOT NULL, 
-    isbn VARCHAR(20) NOT NULL, 
-    description LONGTEXT DEFAULT NULL, 
-    price DOUBLE PRECISION NOT NULL, 
-    stock INT NOT NULL, 
-    published_at DATE DEFAULT NULL, 
-    slug VARCHAR(255) NOT NULL, 
-    category_id INT NOT NULL, 
-    publisher_id INT DEFAULT NULL, 
-    INDEX IDX_CBE5A33112469DE2 (category_id), 
-    INDEX IDX_CBE5A33140C86FCE (publisher_id), 
+        $this->addSql(
+            'CREATE TABLE book (
+    id INT AUTO_INCREMENT NOT NULL,
+    title VARCHAR(255) NOT NULL,
+    isbn VARCHAR(20) NOT NULL,
+    description LONGTEXT DEFAULT NULL,
+    price DOUBLE PRECISION NOT NULL,
+    stock INT NOT NULL,
+    published_at DATE DEFAULT NULL,
+    slug VARCHAR(255) NOT NULL,
+    category_id INT NOT NULL,
+    publisher_id INT DEFAULT NULL,
+    INDEX IDX_CBE5A33112469DE2 (category_id),
+    INDEX IDX_CBE5A33140C86FCE (publisher_id),
     PRIMARY KEY (id)) DEFAULT CHARACTER SET utf8mb4'
         );
 
