@@ -15,3 +15,8 @@
 ### private keys ###
 *.pem
 terraform.tfvars
+### private keys ###
+
+### php-cs ###
+.php-cs-fixer.cache
+### php-cs ###
