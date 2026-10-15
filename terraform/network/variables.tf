@@ -84,3 +84,13 @@ variable "alert_email" {
   description = "Email that receives CloudWatch alarm notifications"
   type        = string
 }
+
+variable "restore_from_latest_snapshot" {
+  type    = bool
+  default = false # set true only when deliberately rebuilding from a snapshot
+}
+
+variable "create_snapshot" {
+  type    = bool
+  default = true # CI and plain `terraform apply` behave as before
+}

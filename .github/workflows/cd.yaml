@@ -1,26 +1,54 @@
 name: CD
 
 on:
-  workflow_run:
-    workflows: ["CI"]
-    types:
-      - completed
-    branches: [main]
+  release:
+    types: [published]
+  workflow_dispatch:            # redeploy or roll back to any existing tag
+    inputs:
+      tag:
+        description: Release tag to deploy (e.g. v1.2.3)
+        required: true
+      environment:
+        description: Target environment
+        type: choice
+        options: [ dev, production ]
+        default: dev
 
 permissions:
-  id-token: write # lets the job request an OIDC token
+  id-token: write               # lets the job request an OIDC token
   contents: read
+  actions: read                 # needed to check CI status
 
 jobs:
   build-and-push:
-    if: github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
+    environment: ${{ github.event_name == 'release' && (github.event.release.prerelease && 'dev' || 'production') || inputs.environment }}
+    concurrency:
+        group: deploy-${{ github.event_name == 'release' && (github.event.release.prerelease && 'dev' || 'production') || inputs.environment }}
+        cancel-in-progress: false
+    env:
+      TAG: ${{ github.event.release.tag_name || inputs.tag }}
 
     steps:
-      - name: Checkout code at the commit CI tested
+      - name: Checkout the release tag
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.workflow_run.head_sha }}
+          ref: ${{ env.TAG }}
+          fetch-depth: 0
+
+      - name: Require the tag to be on main
+        run: |
+          git fetch origin main
+          git merge-base --is-ancestor HEAD origin/main \
+            || { echo "Tag $TAG is not on main"; exit 1; }
+
+      - name: Require green CI on this commit
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          n=$(gh run list --workflow CI --commit "$(git rev-parse HEAD)" \
+                --status success --json conclusion --jq 'length')
+          [ "$n" -gt 0 ] || { echo "No successful CI run for this commit"; exit 1; }
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
@@ -41,7 +69,7 @@ jobs:
           context: .
           push: true
           tags: |
-            ${{ vars.ECR_REPOSITORY }}:${{ github.event.workflow_run.head_sha }}
+            ${{ vars.ECR_REPOSITORY }}:${{ env.TAG }}
           cache-from: type=gha,scope=php
           cache-to: type=gha,mode=max,scope=php
 
@@ -51,16 +79,16 @@ jobs:
           context: ./docker/nginx
           push: true
           tags: |
-               ${{ vars.ECR_NGINX_REPOSITORY }}:${{ github.event.workflow_run.head_sha }}
+            ${{ vars.ECR_NGINX_REPOSITORY }}:${{ env.TAG }}
           cache-from: type=gha,scope=nginx
           cache-to: type=gha,mode=max,scope=nginx
 
       - name: Download current task definition
         run: |
           aws ecs describe-task-definition \
-          --task-definition bookhive-app \
-          --query taskDefinition \
-          > task-definition.json
+            --task-definition ${{ vars.ECS_TASK_FAMILY }} \
+            --query taskDefinition \
+            > task-definition.json
 
       - name: Fill in new PHP image ID
         id: task-def-php
@@ -68,7 +96,7 @@ jobs:
         with:
           task-definition: task-definition.json
           container-name: bookhive
-          image: ${{ vars.ECR_REPOSITORY }}:${{ github.event.workflow_run.head_sha }}
+          image: ${{ vars.ECR_REPOSITORY }}:${{ env.TAG }}
 
       - name: Fill in new nginx image ID
         id: task-def-nginx
@@ -76,12 +104,12 @@ jobs:
         with:
           task-definition: ${{ steps.task-def-php.outputs.task-definition }}
           container-name: nginx
-          image: ${{ vars.ECR_NGINX_REPOSITORY }}:${{ github.event.workflow_run.head_sha }}
+          image: ${{ vars.ECR_NGINX_REPOSITORY }}:${{ env.TAG }}
 
       - name: Deploy ECS task definition
         uses: aws-actions/amazon-ecs-deploy-task-definition@v2
         with:
           task-definition: ${{ steps.task-def-nginx.outputs.task-definition }}
-          service: bookhive-service
-          cluster: bookhive-cluster
+          service: ${{ vars.ECS_SERVICE }}
+          cluster: ${{ vars.ECS_CLUSTER }}
           wait-for-service-stability: true
