@@ -1,0 +1,4 @@
+php:
+  tag: "1.2"
+nginx:
+  nodePort: 30090

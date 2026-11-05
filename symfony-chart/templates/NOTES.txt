@@ -1,0 +1,6 @@
+Symfony app installed.
+{{- if .Values.ingress.enabled }}
+Open http://{{ .Values.ingress.host }}/ (point this name at your server IP in your hosts file)
+{{- else }}
+Open http://<node-ip>:{{ .Values.nginx.nodePort }}
+{{- end }}
