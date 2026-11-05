@@ -11,6 +11,8 @@ spec:
     metadata:
       labels:
         app: nginx
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
     spec:
       containers:
         - name: nginx
@@ -38,4 +40,4 @@ spec:
   ports:
     - port: 80
       targetPort: 80
-      nodePort: 30080
+      nodePort: {{ .Values.nginx.nodePort }}

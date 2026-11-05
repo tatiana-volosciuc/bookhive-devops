@@ -11,6 +11,8 @@ spec:
     metadata:
       labels:
         app: php
+      annotations:
+        checksum/secret: {{ include (print $.Template.BasePath "/secret.yaml") . | sha256sum }}
     spec:
       initContainers:           # replaces depends_on: service_healthy
         - name: wait-for-mysql
@@ -18,13 +20,13 @@ spec:
           command: ["sh", "-c", "until nc -z mysql 3306; do echo waiting for mysql; sleep 2; done"]
       containers:
         - name: php
-          image: symfony-php:1.0
+          image: {{ .Values.php.image }}:{{ .Values.php.tag }}
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 9000
           envFrom:
             - secretRef:
-                name: app-secret      # DB_*, AWS_* from your .env
+                name: app-secret
           env:
             - name: APP_ENV
               value: dev
