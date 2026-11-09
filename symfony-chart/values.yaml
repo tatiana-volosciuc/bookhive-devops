@@ -1,0 +1,25 @@
+php:
+    image: symfony-php
+    tag: "1.0"
+
+nginx:
+    nodePort: 30080
+
+mysql:
+    storage: 5Gi
+
+db:
+    name: ""
+    user: ""
+    password: ""
+
+aws:
+    region: ""
+    accessKeyId: ""
+    secretAccessKey: ""
+    bucket: ""
+
+ingress:
+    enabled: true
+    className: traefik
+    host: myapp.local
