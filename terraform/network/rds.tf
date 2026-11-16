@@ -1,6 +1,7 @@
 resource "aws_db_subnet_group" "db" {
-  name       = "${var.project}-db-subnet-group"
-  subnet_ids = [aws_subnet.private_a.id, aws_subnet.private_b.id]
+  name = "${var.project}-db-subnet-group"
+  # TEMP: superset while the instance is migrated off the app-tier subnets (see phase 2 in docs/failure-log.md)
+  subnet_ids = [aws_subnet.private_a.id, aws_subnet.private_b.id, aws_subnet.db_a.id, aws_subnet.db_b.id]
   tags       = { Name = "${var.project}-db-subnet-group" }
 }
 

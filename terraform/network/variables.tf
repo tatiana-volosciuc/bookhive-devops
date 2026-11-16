@@ -33,6 +33,16 @@ variable "private_subnet_cidr_b" {
   default = "10.0.4.0/24"
 }
 
+variable "db_subnet_cidr_a" {
+  type    = string
+  default = "10.0.5.0/24"
+}
+
+variable "db_subnet_cidr_b" {
+  type    = string
+  default = "10.0.6.0/24"
+}
+
 variable "instance_type" {
   type    = string
   default = "t3.micro"
