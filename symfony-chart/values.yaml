@@ -19,6 +19,10 @@ aws:
     secretAccessKey: ""
     bucket: ""
 
+healthCheck:
+    enabled: true
+    schedule: "*/5 * * * *"
+
 ingress:
     enabled: true
     className: traefik
