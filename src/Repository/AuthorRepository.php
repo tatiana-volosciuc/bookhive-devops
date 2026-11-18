@@ -16,6 +16,20 @@ class AuthorRepository extends ServiceEntityRepository
         parent::__construct($registry, Author::class);
     }
 
+    /**
+     * @return string[]
+     */
+    public function findAllPhotoKeys(): array
+    {
+        $rows = $this->createQueryBuilder('a')
+            ->select('a.photoKey')
+            ->andWhere('a.photoKey IS NOT NULL')
+            ->getQuery()
+            ->getScalarResult();
+
+        return array_column($rows, 'photoKey');
+    }
+
     //    /**
     //     * @return Author[] Returns an array of Author objects
     //     */

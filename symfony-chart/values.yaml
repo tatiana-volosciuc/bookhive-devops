@@ -19,6 +19,23 @@ aws:
     secretAccessKey: ""
     bucket: ""
 
+healthCheck:
+    enabled: true
+    schedule: "*/5 * * * *"
+
+cleanup:
+    enabled: true
+    schedule: "0 3 * * *"
+    minAgeHours: 24
+    dryRun: true
+    # Optional cron-only credentials; empty values fall back to the app's db.* / aws.*
+    db:
+        user: ""
+        password: ""
+    aws:
+        accessKeyId: ""
+        secretAccessKey: ""
+
 ingress:
     enabled: true
     className: traefik
