@@ -51,6 +51,29 @@ class ImageService
     }
 
     /**
+     * @return array<int, array{path: string, lastModified: int|null}>
+     *
+     * @throws FilesystemException
+     */
+    public function listFiles(string $prefix): array
+    {
+        $files = [];
+
+        foreach ($this->s3Storage->listContents($prefix, true) as $item) {
+            if (!$item->isFile()) {
+                continue;
+            }
+
+            $files[] = [
+                'path' => $item->path(),
+                'lastModified' => $item->lastModified(),
+            ];
+        }
+
+        return $files;
+    }
+
+    /**
      * @throws FilesystemException
      */
     public function exists(string $key): bool

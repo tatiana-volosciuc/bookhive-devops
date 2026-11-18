@@ -1,0 +1,46 @@
+{{- if .Values.cleanup.enabled }}
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: cleanup-orphan-photos
+spec:
+  schedule: {{ .Values.cleanup.schedule | quote }}
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 1
+      activeDeadlineSeconds: 600
+      template:
+        metadata:
+          annotations:
+            checksum/secret: {{ include (print $.Template.BasePath "/secret-cron.yaml") . | sha256sum }}
+        spec:
+          restartPolicy: Never
+          initContainers:
+            - name: wait-for-mysql
+              image: busybox:1.36
+              command: ["sh", "-c", "until nc -z mysql 3306; do echo waiting for mysql; sleep 2; done"]
+          containers:
+            - name: cleanup-orphan-photos
+              image: {{ .Values.php.image }}:{{ .Values.php.tag }}
+              imagePullPolicy: IfNotPresent
+              # Overriding `command` bypasses the image entrypoint, so the job doesn't run migrations.
+              command:
+                - php
+                - bin/console
+                - app:cleanup-orphan-photos
+                - --min-age-hours={{ .Values.cleanup.minAgeHours }}
+                {{- if .Values.cleanup.dryRun }}
+                - --dry-run
+                {{- end }}
+              envFrom:
+                - secretRef:
+                    name: cron-secret
+              env:
+                - name: APP_ENV
+                  value: dev
+                - name: DATABASE_URL
+                  value: mysql://$(DB_USER):$(DB_PASSWORD)@mysql:3306/$(DB_NAME)?serverVersion=8.0
+{{- end }}
