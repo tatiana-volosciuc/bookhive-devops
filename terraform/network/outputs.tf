@@ -6,6 +6,14 @@ output "vpc_id" {
   value = aws_vpc.main.id
 }
 
+output "alb_security_group_id" {
+  value = aws_security_group.alb.id
+}
+
+output "database_security_group_id" {
+  value = aws_security_group.db.id
+}
+
 # --- S3 Bucket ---
 output "s3_bucket_name" {
   value = aws_s3_bucket.main.bucket

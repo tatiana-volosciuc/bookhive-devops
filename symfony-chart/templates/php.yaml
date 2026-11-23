@@ -14,10 +14,17 @@ spec:
       annotations:
         checksum/secret: {{ include (print $.Template.BasePath "/secret.yaml") . | sha256sum }}
     spec:
+      {{- if .Values.php.imagePullSecret }}
+      imagePullSecrets:
+        - name: {{ .Values.php.imagePullSecret | quote }}
+      {{- end }}
       initContainers:           # replaces depends_on: service_healthy
         - name: wait-for-mysql
           image: busybox:1.36
-          command: ["sh", "-c", "until nc -z mysql 3306; do echo waiting for mysql; sleep 2; done"]
+          command: ["sh", "-c", "until nc -z \"$DB_HOST\" 3306; do echo waiting for mysql; sleep 2; done"]
+          env:
+            - name: DB_HOST
+              value: {{ .Values.db.host | quote }}
       containers:
         - name: php
           image: {{ .Values.php.image }}:{{ .Values.php.tag }}
@@ -26,12 +33,20 @@ spec:
             - containerPort: 9000
           envFrom:
             - secretRef:
-                name: app-secret
+                name: {{ default "app-secret" .Values.db.existingSecret | quote }}
           env:
             - name: APP_ENV
-              value: dev
+              value: {{ .Values.php.appEnv | quote }}
+            - name: DB_HOST
+              value: {{ .Values.db.host | quote }}
+            - name: AWS_REGION
+              value: {{ .Values.aws.region | quote }}
+            - name: AWS_S3_BUCKET
+              value: {{ .Values.aws.bucket | quote }}
+            {{- if not .Values.db.existingSecret }}
             - name: DATABASE_URL
-              value: mysql://$(DB_USER):$(DB_PASSWORD)@mysql:3306/$(DB_NAME)?serverVersion=8.0
+              value: mysql://$(DB_USER):$(DB_PASSWORD)@$(DB_HOST):3306/$(DB_NAME)?serverVersion=8.0
+            {{- end }}
           readinessProbe:
             tcpSocket:
               port: 9000

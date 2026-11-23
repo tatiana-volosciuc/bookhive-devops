@@ -1,12 +1,9 @@
 #!/bin/sh
 set -e
 
-# Local docker-compose vs ECS detection.
-# ECS Fargate injects ECS_CONTAINER_METADATA_URI_V4 into every container;
-# docker-compose never sets it. (DB_PASSWORD can't be used for this check:
-# ECS injects it too, via `secrets`.)
+# Local development needs test database setup; ECS and production k3s do not.
 LOCAL_SETUP=""
-if [ -z "$ECS_CONTAINER_METADATA_URI_V4" ]; then
+if [ -z "$ECS_CONTAINER_METADATA_URI_V4" ] && [ "${APP_ENV:-dev}" != "prod" ]; then
   LOCAL_SETUP=1
 fi
 
@@ -28,8 +25,8 @@ fi
 
 echo "Waiting for database and running migrations..."
 
-# ECS: the task gets DB_HOST/DB_USER/DB_NAME as plain env vars and DB_PASSWORD
-# from Secrets Manager, but Doctrine reads DATABASE_URL. Build it here.
+# ECS and production k3s provide DB_HOST/DB_USER/DB_NAME and DB_PASSWORD,
+# but Doctrine reads DATABASE_URL. Build it here.
 # The password is URL-encoded because RDS passwords can contain special characters.
 # Locally (docker-compose) DATABASE_URL is provided by compose and left alone.
 if [ -z "$LOCAL_SETUP" ] && [ -n "$DB_HOST" ]; then

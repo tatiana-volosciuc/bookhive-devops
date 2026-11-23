@@ -49,7 +49,7 @@ resource "aws_lb_listener" "https" {
 
   default_action {
     type             = "forward"
-    target_group_arn = aws_lb_target_group.app.arn
+    target_group_arn = var.k3s_target_group_arn != null ? var.k3s_target_group_arn : aws_lb_target_group.app.arn
   }
 }
 

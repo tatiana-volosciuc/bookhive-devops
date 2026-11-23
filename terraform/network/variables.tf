@@ -74,6 +74,12 @@ variable "certificate_arn" {
   type        = string
 }
 
+variable "k3s_target_group_arn" {
+  description = "Set to the validated k3s target group ARN to switch the HTTPS listener from ECS."
+  type        = string
+  default     = null
+}
+
 variable "health_check_path" {
   description = "Path the ALB probes on each task"
   type        = string

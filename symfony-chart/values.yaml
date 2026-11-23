@@ -1,14 +1,19 @@
 php:
     image: symfony-php
     tag: "1.0"
+    appEnv: dev
+    imagePullSecret: ""
 
 nginx:
     nodePort: 30080
 
 mysql:
+    enabled: true
     storage: 5Gi
 
 db:
+    host: mysql
+    existingSecret: ""
     name: ""
     user: ""
     password: ""
