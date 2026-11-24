@@ -10,16 +10,6 @@ resource "aws_vpc_security_group_egress_rule" "db_egress" {
   cidr_ipv4         = "0.0.0.0/0"
 }
 
-# ALB security groups
-resource "aws_vpc_security_group_ingress_rule" "ecs_to_db" {
-  security_group_id            = aws_security_group.db.id
-  referenced_security_group_id = aws_security_group.ecs.id
-  from_port                    = 3306
-  to_port                      = 3306
-  ip_protocol                  = "tcp"
-}
-
-
 resource "aws_security_group" "alb" {
   name        = "${var.project}-alb"
   description = "Public ALB"
@@ -42,31 +32,6 @@ resource "aws_vpc_security_group_ingress_rule" "alb_http" {
   from_port         = 80
   to_port           = 80
   ip_protocol       = "tcp"
-}
-
-# ALB may only talk to the ECS tasks, on the container port
-resource "aws_vpc_security_group_egress_rule" "alb_to_ecs" {
-  security_group_id            = aws_security_group.alb.id
-  referenced_security_group_id = aws_security_group.ecs.id
-  from_port                    = local.container_port
-  to_port                      = local.container_port
-  ip_protocol                  = "tcp"
-}
-
-# ECS tasks: ingress ONLY from the ALB security group (no more 0.0.0.0/0)
-resource "aws_vpc_security_group_ingress_rule" "ecs_from_alb" {
-  security_group_id            = aws_security_group.ecs.id
-  referenced_security_group_id = aws_security_group.alb.id
-  from_port                    = local.container_port
-  to_port                      = local.container_port
-  ip_protocol                  = "tcp"
-}
-
-# Tasks need outbound for ECR/Secrets/S3 via the NAT gateway
-resource "aws_vpc_security_group_egress_rule" "ecs_all" {
-  security_group_id = aws_security_group.ecs.id
-  cidr_ipv4         = "0.0.0.0/0"
-  ip_protocol       = "-1"
 }
 
 # EC2 is disabled at this moment. Commented EC2 implementation for the example.
@@ -94,3 +59,41 @@ resource "aws_vpc_security_group_egress_rule" "ecs_all" {
 #   to_port                      = 3306
 #   ip_protocol                  = "tcp"
 # }
+
+
+# ECS Fargate is disabled at this moment. Commented ECS implementation for the example.
+
+# Tasks need outbound for ECR/Secrets/S3 via the NAT gateway
+#resource "aws_vpc_security_group_egress_rule" "ecs_all" {
+#  security_group_id = aws_security_group.ecs.id
+#  cidr_ipv4         = "0.0.0.0/0"
+#  ip_protocol       = "-1"
+#}
+
+# ALB security groups
+#resource "aws_vpc_security_group_ingress_rule" "ecs_to_db" {
+#  security_group_id            = aws_security_group.db.id
+#  referenced_security_group_id = aws_security_group.ecs.id
+#  from_port                    = 3306
+#  to_port                      = 3306
+#  ip_protocol                  = "tcp"
+#}
+
+# ALB may only talk to the ECS tasks, on the container port
+#resource "aws_vpc_security_group_egress_rule" "alb_to_ecs" {
+#  security_group_id            = aws_security_group.alb.id
+#  referenced_security_group_id = aws_security_group.ecs.id
+#  from_port                    = local.container_port
+#  to_port                      = local.container_port
+#  ip_protocol                  = "tcp"
+#}
+
+# ECS tasks: ingress ONLY from the ALB security group (no more 0.0.0.0/0)
+#resource "aws_vpc_security_group_ingress_rule" "ecs_from_alb" {
+#  security_group_id            = aws_security_group.ecs.id
+#  referenced_security_group_id = aws_security_group.alb.id
+#  from_port                    = local.container_port
+#  to_port                      = local.container_port
+#  ip_protocol                  = "tcp"
+#}
+

@@ -6,6 +6,14 @@ output "vpc_id" {
   value = aws_vpc.main.id
 }
 
+output "alb_security_group_id" {
+  value = aws_security_group.alb.id
+}
+
+output "database_security_group_id" {
+  value = aws_security_group.db.id
+}
+
 # --- S3 Bucket ---
 output "s3_bucket_name" {
   value = aws_s3_bucket.main.bucket
@@ -33,14 +41,14 @@ output "ecr_repository_name" {
   value = aws_ecr_repository.app.name
 }
 
-# --- Fargate ---
-output "ecs_cluster_name" {
-  value = aws_ecs_cluster.main.name
-}
-
-output "ecs_service_name" {
-  value = aws_ecs_service.app.name
-}
+# --- Fargate dosabled ---
+#output "ecs_cluster_name" {
+#  value = aws_ecs_cluster.main.name
+#}
+#
+#output "ecs_service_name" {
+#  value = aws_ecs_service.app.name
+#}
 
 # --- Alb ---
 output "alb_dns_name" {

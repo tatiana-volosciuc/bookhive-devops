@@ -128,6 +128,10 @@ Two GitHub Actions workflows ([.github/workflows/ci.yaml](.github/workflows/ci.y
 
 ## Infrastructure (AWS)
 
+For the staged EC2/k3s and Terraform-managed Helm migration, see
+[docs/k3s-aws-migration.md](docs/k3s-aws-migration.md). ECS remains the active
+target until the documented cutover.
+
 Provisioned via Terraform in [terraform/network](terraform/network). See [docs/architecture.md](docs/architecture.md) for a diagram kept in sync with what's actually deployed. Current target architecture:
 
 - **Networking** — a VPC across 2 Availability Zones with public subnets (ALB, NAT Gateway) and private subnets (ECS tasks, RDS). A single NAT Gateway provides outbound internet access for the private subnets; an S3 gateway VPC endpoint avoids routing S3 traffic through it.

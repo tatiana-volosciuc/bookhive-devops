@@ -1,4 +1,7 @@
 {{- if .Values.cleanup.enabled }}
+{{- if .Values.db.existingSecret }}
+{{- fail "cleanup is not supported with db.existingSecret; disable cleanup.enabled" }}
+{{- end }}
 apiVersion: batch/v1
 kind: CronJob
 metadata:

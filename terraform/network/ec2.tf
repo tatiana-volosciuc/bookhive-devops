@@ -1,4 +1,4 @@
-# EC2 is currently disabled as the infrastructure depends on the Fargate.
+# EC2 is currently disabled as the infrastructure depends on the ECR K8S Helms.
 # Remains as an example
 
 # data "aws_ami" "al2023" {
