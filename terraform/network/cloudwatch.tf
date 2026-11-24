@@ -21,22 +21,6 @@ resource "aws_cloudwatch_log_metric_filter" "app_errors" {
   }
 }
 
-resource "aws_cloudwatch_metric_alarm" "ecs_memory" {
-  alarm_name  = "${var.project}-ecs-memory-high"
-  namespace   = "AWS/ECS"
-  metric_name = "MemoryUtilization"
-  dimensions = {
-    ClusterName = aws_ecs_cluster.main.name
-    ServiceName = aws_ecs_service.app.name
-  }
-  statistic           = "Average"
-  period              = 60
-  evaluation_periods  = 3
-  threshold           = 80
-  comparison_operator = "GreaterThanThreshold"
-  alarm_actions       = [aws_sns_topic.alerts.arn]
-}
-
 resource "aws_sns_topic" "alerts" {
   name = "${var.project}-alerts"
 }
@@ -50,7 +34,9 @@ resource "aws_sns_topic_subscription" "email" {
 locals {
   alb_dims = {
     LoadBalancer = aws_lb.main.arn_suffix
-    TargetGroup  = aws_lb_target_group.app.arn_suffix
+    TargetGroup  = var.k3s_target_group_arn != null
+    ? split (":", var.k3s_target_group_arn)[5]
+    : aws_lb_target_group.app.arn_suffix
   }
 }
 
@@ -130,23 +116,6 @@ resource "aws_cloudwatch_metric_alarm" "latency_p95" {
   alarm_actions       = [aws_sns_topic.alerts.arn]
 }
 
-# 6. ECS CPU
-resource "aws_cloudwatch_metric_alarm" "ecs_cpu" {
-  alarm_name  = "${var.project}-ecs-cpu-high"
-  namespace   = "AWS/ECS"
-  metric_name = "CPUUtilization"
-  dimensions = {
-    ClusterName = aws_ecs_cluster.main.name
-    ServiceName = aws_ecs_service.app.name
-  }
-  statistic           = "Average"
-  period              = 60
-  evaluation_periods  = 3
-  threshold           = 80
-  comparison_operator = "GreaterThanThreshold"
-  alarm_actions       = [aws_sns_topic.alerts.arn]
-}
-
 resource "aws_cloudwatch_metric_alarm" "app_errors" {
   alarm_name          = "${var.project}-app-errors"
   namespace           = "${var.project}/App"
@@ -159,3 +128,38 @@ resource "aws_cloudwatch_metric_alarm" "app_errors" {
   treat_missing_data  = "notBreaching"
   alarm_actions       = [aws_sns_topic.alerts.arn]
 }
+
+# ECS is disabled and commented as an example
+
+#resource "aws_cloudwatch_metric_alarm" "ecs_memory" {
+#  alarm_name  = "${var.project}-ecs-memory-high"
+#  namespace   = "AWS/ECS"
+#  metric_name = "MemoryUtilization"
+#  dimensions = {
+#    ClusterName = aws_ecs_cluster.main.name
+#    ServiceName = aws_ecs_service.app.name
+#  }
+#  statistic           = "Average"
+#  period              = 60
+#  evaluation_periods  = 3
+#  threshold           = 80
+#  comparison_operator = "GreaterThanThreshold"
+#  alarm_actions       = [aws_sns_topic.alerts.arn]
+#}
+
+# 6. ECS CPU
+#resource "aws_cloudwatch_metric_alarm" "ecs_cpu" {
+#  alarm_name  = "${var.project}-ecs-cpu-high"
+#  namespace   = "AWS/ECS"
+#  metric_name = "CPUUtilization"
+#  dimensions = {
+#    ClusterName = aws_ecs_cluster.main.name
+#    ServiceName = aws_ecs_service.app.name
+#  }
+#  statistic           = "Average"
+#  period              = 60
+#  evaluation_periods  = 3
+#  threshold           = 80
+#  comparison_operator = "GreaterThanThreshold"
+#  alarm_actions       = [aws_sns_topic.alerts.arn]
+#}

@@ -19,20 +19,22 @@ resource "aws_secretsmanager_secret_version" "app_secret" {
   secret_string = random_password.app_secret.result
 }
 
-# Lets the ECS execution role read the DB password and APP_SECRET at task start.
-# (Delete any older "execution_secrets" copy from other files.)
-data "aws_iam_policy_document" "execution_secrets" {
-  statement {
-    actions = ["secretsmanager:GetSecretValue"]
-    resources = [
-      aws_db_instance.main.master_user_secret[0].secret_arn,
-      aws_secretsmanager_secret.app_secret.arn
-    ]
-  }
-}
-
 resource "aws_iam_role_policy" "execution_secrets" {
   name   = "${var.project}-execution-secrets"
   role   = aws_iam_role.ecs_execution_role.id
   policy = data.aws_iam_policy_document.execution_secrets.json
 }
+
+# ECS is disabled and commented as an example.
+
+# Lets the ECS execution role read the DB password and APP_SECRET at task start.
+# (Delete any older "execution_secrets" copy from other files.)
+#data "aws_iam_policy_document" "execution_secrets" {
+#  statement {
+#    actions = ["secretsmanager:GetSecretValue"]
+#    resources = [
+#      aws_db_instance.main.master_user_secret[0].secret_arn,
+#      aws_secretsmanager_secret.app_secret.arn
+#    ]
+#  }
+#}
