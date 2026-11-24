@@ -34,13 +34,6 @@ resource "aws_vpc_security_group_ingress_rule" "alb_http" {
   ip_protocol       = "tcp"
 }
 
-# Tasks need outbound for ECR/Secrets/S3 via the NAT gateway
-resource "aws_vpc_security_group_egress_rule" "ecs_all" {
-  security_group_id = aws_security_group.ecs.id
-  cidr_ipv4         = "0.0.0.0/0"
-  ip_protocol       = "-1"
-}
-
 # EC2 is disabled at this moment. Commented EC2 implementation for the example.
 
 # resource "aws_security_group" "app" {
@@ -69,6 +62,13 @@ resource "aws_vpc_security_group_egress_rule" "ecs_all" {
 
 
 # ECS Fargate is disabled at this moment. Commented ECS implementation for the example.
+
+# Tasks need outbound for ECR/Secrets/S3 via the NAT gateway
+#resource "aws_vpc_security_group_egress_rule" "ecs_all" {
+#  security_group_id = aws_security_group.ecs.id
+#  cidr_ipv4         = "0.0.0.0/0"
+#  ip_protocol       = "-1"
+#}
 
 # ALB security groups
 #resource "aws_vpc_security_group_ingress_rule" "ecs_to_db" {

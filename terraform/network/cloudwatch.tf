@@ -2,6 +2,11 @@ locals {
   rds_log_types = ["error", "slowquery"]
 }
 
+resource "aws_cloudwatch_log_group" "app" {
+  name              = "/${var.project}/app"
+  retention_in_days = 7
+}
+
 resource "aws_cloudwatch_log_group" "rds" {
   for_each          = toset(local.rds_log_types)
   name              = "/aws/rds/instance/${var.project}-db/${each.key}"
@@ -34,9 +39,11 @@ resource "aws_sns_topic_subscription" "email" {
 locals {
   alb_dims = {
     LoadBalancer = aws_lb.main.arn_suffix
-    TargetGroup  = var.k3s_target_group_arn != null
-    ? split (":", var.k3s_target_group_arn)[5]
+    TargetGroup = (
+    var.k3s_target_group_arn != null
+    ? split(":", var.k3s_target_group_arn)[5]
     : aws_lb_target_group.app.arn_suffix
+    )
   }
 }
 
